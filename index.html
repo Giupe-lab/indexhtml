@@ -614,6 +614,48 @@
 
 </div>
 
+<!-- INSIGHTS PAGE -->
+<div id="view-insights" class="hidden space-y-5 fade-in">
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h2 class="text-lg font-bold text-white mb-1">Trading Insights</h2>
+        <p class="text-xs text-slate-400">Scopri dove, quando e come ottieni i risultati migliori.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+            <h3 class="text-sm font-bold text-white mb-4">Performance per giorno</h3>
+            <div class="h-64">
+                <canvas id="insightsWeekdayChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+            <h3 class="text-sm font-bold text-white mb-4">Performance per simbolo</h3>
+            <div class="h-64">
+                <canvas id="insightsSymbolChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-5 sm:col-span-2">
+            <h3 class="text-sm font-bold text-white mb-4">LONG vs SHORT</h3>
+            <div class="h-64">
+                <canvas id="insightsDirectionChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-3">Analisi delle note</h3>
+        <div id="insights-notes" class="text-sm text-slate-400">
+            Le analisi appariranno quando saranno disponibili operazioni registrate.
+        </div>
+    </div>
+
+</div>
+
                 <!-- ========================================================= -->
                 <!-- VISTA 3: TRADE JOURNAL (ELENCO COMPLETO OPERAZIONI)       -->
                 <!-- ========================================================= -->
@@ -1365,7 +1407,7 @@ const WEEK_ORDINALS = [
 
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
-            const views = ['calendar', 'dashboard', 'stats', 'journal', 'generic'];
+            const views = ['calendar', 'dashboard', 'stats', 'insights', 'journal', 'generic'];
             views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
 
             document.querySelectorAll('.nav-item').forEach(btn => {
@@ -1405,6 +1447,10 @@ const WEEK_ORDINALS = [
 } else if (viewName === 'stats') {
     document.getElementById('view-stats').classList.remove('hidden');
     renderStats();
+
+} else if (viewName === 'insights') {
+    document.getElementById('view-insights').classList.remove('hidden');
+    renderInsights();
 
 } else if (viewName === 'journal') {
     document.getElementById('view-journal').classList.remove('hidden');
