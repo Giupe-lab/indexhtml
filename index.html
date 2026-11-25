@@ -100,6 +100,57 @@
 </head>
 <body class="bg-navy-900 text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
 
+<!-- SCHERMATA AUTENTICAZIONE MY PNL -->
+<div id="auth-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-[#05070F] px-5">
+
+    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#0B1020] p-8 shadow-2xl">
+
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-bold tracking-tight text-white">My <span class="text-blue-400">PnL</span></h1>
+            <p class="mt-2 text-sm text-slate-400">Il tuo trading journal, sempre con te.</p>
+        </div>
+
+        <h2 id="auth-title" class="mb-2 text-xl font-semibold text-white">Bentornato</h2>
+        <p id="auth-description" class="mb-6 text-sm text-slate-400">Accedi al tuo account per continuare.</p>
+
+        <form id="auth-form" class="space-y-4">
+
+            <div>
+                <label class="mb-2 block text-sm text-slate-300">Email</label>
+                <input id="auth-email" type="email" required autocomplete="email"
+                    class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white outline-none focus:border-blue-500"
+                    placeholder="nome@email.com">
+            </div>
+
+            <div>
+                <label class="mb-2 block text-sm text-slate-300">Password</label>
+                <input id="auth-password" type="password" required minlength="8" autocomplete="current-password"
+                    class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white outline-none focus:border-blue-500"
+                    placeholder="Almeno 8 caratteri">
+            </div>
+
+            <p id="auth-error" class="hidden text-sm text-red-400"></p>
+
+            <button id="auth-submit" type="submit"
+                class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500">
+                Accedi
+            </button>
+
+        </form>
+
+        <div class="mt-6 flex flex-col items-center gap-3 text-sm">
+            <button id="auth-toggle" type="button" class="text-blue-400 hover:text-blue-300">
+                Non hai un account? Registrati
+            </button>
+
+            <button id="auth-recovery" type="button" class="text-slate-400 hover:text-white">
+                Password dimenticata?
+            </button>
+        </div>
+
+    </div>
+</div>
+
     <!-- Layout Principale -->
     <div class="flex min-h-screen w-full">
 
@@ -2287,11 +2338,140 @@ function renderBacktesting() {
             }, 2800);
         }
 
-        // Avvio applicazione
-        window.addEventListener('DOMContentLoaded', () => {
-            loadTrades();
-            renderAll();
-        });
+        
+// AUTENTICAZIONE MY PNL
+window.addEventListener('DOMContentLoaded', async () => {
+
+    const authScreen = document.getElementById('auth-screen');
+    const authForm = document.getElementById('auth-form');
+    const authEmail = document.getElementById('auth-email');
+    const authPassword = document.getElementById('auth-password');
+    const authTitle = document.getElementById('auth-title');
+    const authDescription = document.getElementById('auth-description');
+    const authSubmit = document.getElementById('auth-submit');
+    const authToggle = document.getElementById('auth-toggle');
+    const authRecovery = document.getElementById('auth-recovery');
+    const authError = document.getElementById('auth-error');
+
+    let authMode = 'login';
+
+    function showAuthError(message) {
+        authError.textContent = message;
+        authError.classList.remove('hidden');
+    }
+
+    function setAuthMode(mode) {
+        authMode = mode;
+        authError.classList.add('hidden');
+
+        if (mode === 'login') {
+            authTitle.textContent = 'Bentornato';
+            authDescription.textContent = 'Accedi al tuo account per continuare.';
+            authSubmit.textContent = 'Accedi';
+            authToggle.textContent = 'Non hai un account? Registrati';
+            authPassword.autocomplete = 'current-password';
+        } else {
+            authTitle.textContent = 'Crea il tuo account';
+            authDescription.textContent = 'Registrati per iniziare a usare My PnL.';
+            authSubmit.textContent = 'Registrati';
+            authToggle.textContent = 'Hai già un account? Accedi';
+            authPassword.autocomplete = 'new-password';
+        }
+    }
+
+    function enterApp() {
+        authScreen.classList.add('hidden');
+        loadTrades();
+        renderAll();
+    }
+
+    authToggle.addEventListener('click', () => {
+        setAuthMode(authMode === 'login' ? 'signup' : 'login');
+    });
+
+    authForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        authError.classList.add('hidden');
+        authSubmit.disabled = true;
+        authSubmit.textContent = 'Attendi...';
+
+        const email = authEmail.value.trim();
+        const password = authPassword.value;
+
+        try {
+            let result;
+
+            if (authMode === 'login') {
+                result = await supabaseClient.auth.signInWithPassword({
+                    email,
+                    password
+                });
+            } else {
+                result = await supabaseClient.auth.signUp({
+                    email,
+                    password
+                });
+            }
+
+            if (result.error) {
+                throw result.error;
+            }
+
+            if (authMode === 'signup' && !result.data.session) {
+                showAuthError(
+                    'Registrazione completata! Controlla la tua email per confermare l’account.'
+                );
+                return;
+            }
+
+            enterApp();
+
+        } catch (error) {
+            showAuthError(error.message || 'Si è verificato un errore.');
+        } finally {
+            authSubmit.disabled = false;
+            authSubmit.textContent = authMode === 'login' ? 'Accedi' : 'Registrati';
+        }
+    });
+
+    authRecovery.addEventListener('click', async () => {
+        authError.classList.add('hidden');
+
+        const email = authEmail.value.trim();
+
+        if (!email) {
+            showAuthError('Inserisci prima il tuo indirizzo email.');
+            return;
+        }
+
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(
+            email,
+            { redirectTo: window.location.href }
+        );
+
+        if (error) {
+            showAuthError(error.message);
+        } else {
+            showAuthError('Se l’indirizzo è registrato, riceverai un’email per reimpostare la password.');
+        }
+    });
+
+    // Controlla se esiste già una sessione
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) {
+        showAuthError('Errore durante il controllo della sessione.');
+        return;
+    }
+
+    if (data.session) {
+        enterApp();
+    } else {
+        authScreen.classList.remove('hidden');
+    }
+});
+
     </script>
 </body>
 </html>
