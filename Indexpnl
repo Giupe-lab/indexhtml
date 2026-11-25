@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My PnL - Trading Journal & Calendar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js per le viste Dashboard e Stats -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            950: '#0d1019',
+                            900: '#111521', // Sfondo principale
+                            850: '#151926',
+                            800: '#181d2d', // Sidebar e Header
+                            750: '#1e2436', // Card e celle
+                            700: '#242b40',
+                            600: '#2a3146', // Bordi
+                        },
+                        profit: {
+                            bg: '#1b3536',
+                            border: '#244849',
+                            text: '#34d399',
+                            bright: '#22c55e'
+                        },
+                        loss: {
+                            bg: '#38212b',
+                            border: '#4d2b3a',
+                            text: '#f87171',
+                            bright: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111521;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Pattern a righe diagonali per i giorni fuori mese */
+        .striped-day {
+            background-color: #191f2e;
+            background-image: repeating-linear-gradient(
+                45deg,
+                #1b2234,
+                #1b2234 12px,
+                #26314d 12px,
+                #26314d 24px
+            );
+        }
+
+        /* Scrollbar personalizzata minimalista */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111521;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a3146;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b4563;
+        }
+
+        /* Animazioni fluide */
+        .fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-navy-900 text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Layout Principale -->
+    <div class="flex min-h-screen w-full">
+
+        <!-- Overlay Mobile per Sidebar -->
+        <div id="mobile-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden backdrop-blur-xs"></div>
+
+        <!-- SIDEBAR SINISTRA -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-60 bg-navy-800 border-r border-navy-600 flex flex-col justify-between transition-transform duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+            <div>
+                <!-- Logo Brand -->
+                <div class="h-16 px-4 flex items-center justify-between border-b border-navy-600/60">
+                    <div class="flex items-center gap-2.5 cursor-pointer" onclick="switchView('calendar')">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <span class="font-bold text-white text-lg tracking-tighter">P</span>
+                        </div>
+                        <span class="font-bold text-lg tracking-tight text-white">My <span class="text-blue-400">PnL</span></span>
+                    </div>
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-700">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <button title="Comprimi Sidebar" onclick="showToast('Modalità compatta attivabile da desktop')" class="hidden lg:flex p-1.5 rounded-md border border-navy-600 text-slate-400 hover:text-white hover:bg-navy-700 transition">
+                        <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Bottone + Upload Trade -->
+                <div class="p-4">
+                    <button onclick="openUploadModal()" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 transition-all active:scale-[0.98] cursor-pointer">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        <span>Upload Trade</span>
+                    </button>
+                </div>
+
+                <!-- Menu Navigazione Principale -->
+                <nav class="px-3 space-y-1 text-sm font-medium">
+                    <button onclick="switchView('dashboard')" data-nav="dashboard" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button onclick="switchView('stats')" data-nav="stats" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                        <span>Stats</span>
+                    </button>
+                    <button onclick="switchView('calendar')" data-nav="calendar" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-600 text-white shadow-md shadow-blue-600/25 transition">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        <span>Calendar</span>
+                    </button>
+                    <button onclick="switchView('journal')" data-nav="journal" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                        <span>Trade Journal</span>
+                    </button>
+                    <button onclick="switchView('insights')" data-nav="insights" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Trading Insights</span>
+                    </button>
+                    <button onclick="switchView('diary')" data-nav="diary" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>Trade Diary</span>
+                    </button>
+                    <button onclick="switchView('playbooks')" data-nav="playbooks" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="target" class="w-4 h-4"></i>
+                        <span>Playbooks</span>
+                    </button>
+                    <button onclick="switchView('watchlist')" data-nav="watchlist" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                        <span>Watchlist</span>
+                    </button>
+                    <button onclick="switchView('backtesting')" data-nav="backtesting" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="rewind" class="w-4 h-4"></i>
+                        <span>Backtesting</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Menu Inferiore Sidebar -->
+            <div class="p-3 border-t border-navy-600/60 space-y-1 text-sm font-medium">
+                <button onclick="showToast('Modulo richiesta funzionalità aperto')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-blue-400 hover:bg-navy-750 transition">
+                    <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+                    <span>Request Feature</span>
+                </button>
+                <button onclick="showToast('Piano attuale: Pro Challenge Unlimited')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-amber-400 hover:bg-navy-750 transition">
+                    <i data-lucide="crown" class="w-4 h-4"></i>
+                    <span>Pricing</span>
+                </button>
+                <button onclick="openSettingsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    <span>Settings</span>
+                </button>
+                <button onclick="showToast('Sessione salvata in locale')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-750 transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- AREA CONTENUTO PRINCIPALE -->
+        <div class="flex-1 flex flex-col min-w-0">
+
+            <!-- TOP HEADER BAR -->
+            <header class="h-16 bg-navy-800 border-b border-navy-600 px-4 lg:px-6 flex items-center justify-between gap-3 sticky top-0 z-20">
+                <!-- Sinistra: Menu Mobile + Titolo Pagina -->
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-lg bg-navy-750 border border-navy-600 text-slate-300 hover:text-white">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div class="flex items-center gap-2.5">
+                        <i id="header-icon" data-lucide="calendar" class="w-5 h-5 text-slate-300"></i>
+                        <h1 id="header-title" class="text-lg font-semibold text-white tracking-tight">Calendar</h1>
+                    </div>
+                </div>
+
+                <!-- Destra: Controlli Filtri, Account e Saldo -->
+                <div class="flex items-center gap-2 sm:gap-3 overflow-x-auto py-1">
+                    <!-- Selettore Periodo -->
+                    <div class="hidden md:flex items-center bg-navy-750 border border-navy-600 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-200 gap-2 cursor-pointer hover:border-slate-500 transition">
+                        <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <select id="time-range-select" onchange="renderAll()" class="bg-transparent focus:outline-none cursor-pointer text-slate-200">
+                            <option value="all" class="bg-navy-800">All Time</option>
+                            <option value="month" class="bg-navy-800">Current Month</option>
+                            <option value="q3" class="bg-navy-800">Q3 2025</option>
+                        </select>
+                    </div>
+
+                    <!-- Selettore Filtri Direzione -->
+                    <div class="hidden sm:flex items-center bg-navy-750 border border-navy-600 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-200 gap-2 cursor-pointer hover:border-slate-500 transition">
+                        <i data-lucide="filter" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <select id="direction-filter" onchange="renderAll()" class="bg-transparent focus:outline-none cursor-pointer text-slate-200">
+                            <option value="ALL" class="bg-navy-800">Filters (All)</option>
+                            <option value="LONG" class="bg-navy-800">Long Only</option>
+                            <option value="SHORT" class="bg-navy-800">Short Only</option>
+                            <option value="WIN" class="bg-navy-800">Winners Only</option>
+                            <option value="LOSS" class="bg-navy-800">Losers Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Selettore Account -->
+                    <div class="flex items-center bg-navy-750 border border-navy-600 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-200 gap-2 hover:border-slate-500 transition">
+                        <i data-lucide="wallet" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        <select id="account-select" onchange="changeAccount()" class="bg-transparent focus:outline-none cursor-pointer text-slate-200 font-medium">
+                            <option value="200K challenge" data-size="200000" data-base="260000" class="bg-navy-800">200K challenge</option>
+                            <option value="100K Prop" data-size="100000" data-base="114200" class="bg-navy-800">100K Prop</option>
+                            <option value="Personal Live" data-size="50000" data-base="62500" class="bg-navy-800">Personal Live</option>
+                        </select>
+                    </div>
+
+                    <!-- Badge Saldo Account -->
+                    <div class="hidden xl:flex items-center bg-navy-750 border border-navy-600 rounded-lg px-3 py-1 gap-3">
+                        <span id="account-balance-badge" class="text-sm font-bold text-profit-text">$+260.0k</span>
+                        <div class="text-[10px] leading-tight border-l border-navy-600 pl-2.5">
+                            <div class="text-slate-400">Cash: <span class="text-blue-400 font-medium">$0.00</span></div>
+                            <div class="text-slate-400">Active: <span id="account-active-badge" class="text-profit-text font-medium">$+260.0k</span></div>
+                        </div>
+                        <button onclick="openSettingsModal()" title="Modifica Account" class="text-slate-400 hover:text-white transition">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Icone Tema & Notifiche -->
+                    <button onclick="showToast('Tema Dark Navy ottimizzato attivo')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-750 transition hidden sm:flex">
+                        <i data-lucide="sun" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="showToast('Nessuna nuova notifica di sistema')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-750 transition relative">
+                        <i data-lucide="bell" class="w-4 h-4"></i>
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full absolute top-2 right-2"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTENITORE VISTE DINAMICHE -->
+            <main class="flex-1 p-4 lg:p-6 max-w-[1600px] w-full mx-auto space-y-5">
+
+                <!-- ========================================================= -->
+                <!-- VISTA 1: CALENDAR (VISTA PRINCIPALE COME DA SCREENSHOT)   -->
+                <!-- ========================================================= -->
+                <div id="view-calendar" class="space-y-5 fade-in">
+                    
+                    <!-- Sub-Header: Toggle Monthly/Yearly, KPI Mensili, Controlli Anno/Mese -->
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-navy-800/50 p-3.5 rounded-xl border border-navy-600/70">
+                        
+                        <!-- Toggle Monthly / Yearly + KPI -->
+                        <div class="flex flex-wrap items-center gap-4 sm:gap-7">
+                            <!-- Pill Toggle -->
+                            <div class="inline-flex bg-navy-800 p-1 rounded-lg border border-navy-600">
+                                <button id="btn-mode-monthly" onclick="setCalendarMode('monthly')" class="px-3.5 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white shadow-xs transition">Monthly</button>
+                                <button id="btn-mode-yearly" onclick="setCalendarMode('yearly')" class="px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">Yearly</button>
+                            </div>
+
+                            <!-- 4 Metriche KPI Dinamiche -->
+                            <div class="flex flex-wrap items-center gap-5 sm:gap-8">
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-400">PnL</div>
+                                    <div id="kpi-pnl" class="text-base sm:text-lg font-bold text-profit-text tracking-tight">$8132.11</div>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-400">PnL %</div>
+                                    <div id="kpi-pnl-pct" class="text-base sm:text-lg font-bold text-profit-text tracking-tight">4.1%</div>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-400">Trades</div>
+                                    <div id="kpi-trades" class="text-base sm:text-lg font-bold text-white tracking-tight">59</div>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-medium text-slate-400">Win Rate</div>
+                                    <div id="kpi-winrate" class="text-base sm:text-lg font-bold text-white tracking-tight">81%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Controlli Destra: Year & Month -->
+                        <div class="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-300">Year:</span>
+                                <select id="year-select" onchange="changeDateSelection()" class="bg-navy-800 border border-navy-600 rounded-lg px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 cursor-pointer">
+                                    <option value="2024">2024</option>
+                                    <option value="2025" selected>2025</option>
+                                    <option value="2026">2026</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-300">Month:</span>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="navigateMonth(-1)" title="Mese precedente" class="p-1.5 rounded-lg bg-navy-800 border border-navy-600 text-slate-300 hover:text-white hover:border-slate-500 transition">
+                                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <select id="month-select" onchange="changeDateSelection()" class="bg-navy-800 border border-navy-600 rounded-lg px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-blue-500 cursor-pointer min-w-[100px]">
+                                        <option value="0">January</option>
+                                        <option value="1">February</option>
+                                        <option value="2">March</option>
+                                        <option value="3">April</option>
+                                        <option value="4">May</option>
+                                        <option value="5">June</option>
+                                        <option value="6" selected>July</option>
+                                        <option value="7">August</option>
+                                        <option value="8">September</option>
+                                        <option value="9">October</option>
+                                        <option value="10">November</option>
+                                        <option value="11">December</option>
+                                    </select>
+                                    <button onclick="navigateMonth(1)" title="Mese successivo" class="p-1.5 rounded-lg bg-navy-800 border border-navy-600 text-slate-300 hover:text-white hover:border-slate-500 transition">
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vista Mensile: Weekly Summary Column + Griglia 7 Giorni -->
+                    <div id="monthly-calendar-container" class="flex flex-col xl:flex-row gap-4">
+                        
+                        <!-- Colonna Sinistra: WEEKLY SUMMARY -->
+                        <div class="xl:w-44 shrink-0 bg-navy-800/60 border border-navy-600 rounded-xl p-3 flex flex-col">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center pb-2.5 mb-2 border-b border-navy-600/60">
+                                WEEKLY SUMMARY
+                            </div>
+                            <div id="weekly-summary-cards" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-1 gap-2.5 flex-1">
+                                <!-- Popolato dinamicamente via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Griglia Calendario Principale (7 Colonne) -->
+                        <div class="flex-1 bg-navy-800/60 border border-navy-600 rounded-xl p-3 overflow-x-auto">
+                            <div class="min-w-[680px]">
+                                <!-- Intestazione Giorni della Settimana -->
+                                <div class="grid grid-cols-7 gap-2.5 mb-2.5">
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">SUN</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">MON</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">TUE</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">WED</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">THU</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">FRI</div>
+                                    <div class="text-center text-[11px] font-bold text-slate-400 tracking-wider py-1">SAT</div>
+                                </div>
+
+                                <!-- Celle Giorni -->
+                                <div id="calendar-days-grid" class="grid grid-cols-7 gap-2.5">
+                                    <!-- Popolato dinamicamente via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vista Annuale (Nascosta di default, attivabile dal toggle Yearly) -->
+                    <div id="yearly-calendar-container" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <!-- Popolato dinamicamente via JS -->
+                    </div>
+
+                    <!-- Sezione Inferiore: Tabella "Weekly Info" -->
+                    <div class="bg-navy-800/80 border border-navy-600 rounded-xl p-4 sm:p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-base font-bold text-white">Weekly Info</h2>
+                            <span class="text-xs text-slate-400">Clicca su qualsiasi cella del calendario per gestire i trade del giorno</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[700px]">
+                                <thead>
+                                    <tr class="border-b border-navy-600 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        <th class="py-3 px-3">Week</th>
+                                        <th class="py-3 px-3 text-center">Trades</th>
+                                        <th class="py-3 px-3 text-center">Win %</th>
+                                        <th class="py-3 px-3 text-right">Avg Gain</th>
+                                        <th class="py-3 px-3 text-right">Avg Loss</th>
+                                        <th class="py-3 px-3 text-right">Biggest Gain</th>
+                                        <th class="py-3 px-3 text-right">Biggest Loss</th>
+                                        <th class="py-3 px-3 text-right">Net PnL</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="weekly-info-tbody" class="divide-y divide-navy-600/50 text-xs sm:text-sm font-medium">
+                                    <!-- Popolato dinamicamente via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- VISTA 2: DASHBOARD & EQUITY CURVE                         -->
+                <!-- ========================================================= -->
+                <div id="view-dashboard" class="hidden space-y-5 fade-in">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+                            <div class="text-xs text-slate-400 mb-1">Total Net PnL (All Time)</div>
+                            <div id="dash-total-pnl" class="text-2xl font-bold text-profit-text">$8,132.11</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Aggiornato in tempo reale</div>
+                        </div>
+                        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+                            <div class="text-xs text-slate-400 mb-1">Profit Factor</div>
+                            <div id="dash-profit-factor" class="text-2xl font-bold text-white">2.84</div>
+                            <div class="text-[11px] text-profit-text mt-1">Ottima gestione del rischio</div>
+                        </div>
+                        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+                            <div class="text-xs text-slate-400 mb-1">Win Rate Globale</div>
+                            <div id="dash-winrate" class="text-2xl font-bold text-blue-400">81%</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Su tutti i trade registrati</div>
+                        </div>
+                        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+                            <div class="text-xs text-slate-400 mb-1">Avg R:R / Expectancy</div>
+                            <div id="dash-expectancy" class="text-2xl font-bold text-purple-400">+$137.83</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Valore atteso per trade</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                        <h3 class="text-sm font-bold text-white mb-4">Cumulative Equity Curve</h3>
+                        <div class="h-72 w-full">
+                            <canvas id="equityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- VISTA 3: TRADE JOURNAL (ELENCO COMPLETO OPERAZIONI)       -->
+                <!-- ========================================================= -->
+                <div id="view-journal" class="hidden space-y-4 fade-in">
+                    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h2 class="text-base font-bold text-white">Trade Journal Log</h2>
+                                <p class="text-xs text-slate-400">Storico dettagliato di tutte le operazioni eseguite</p>
+                            </div>
+                            <button onclick="openUploadModal()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 self-start">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Nuovo Trade
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[750px]">
+                                <thead>
+                                    <tr class="border-b border-navy-600 text-[11px] font-semibold text-slate-400 uppercase">
+                                        <th class="py-3 px-3">Date</th>
+                                        <th class="py-3 px-3">Symbol</th>
+                                        <th class="py-3 px-3">Side</th>
+                                        <th class="py-3 px-3">Account</th>
+                                        <th class="py-3 px-3">Setup / Notes</th>
+                                        <th class="py-3 px-3 text-right">Net PnL</th>
+                                        <th class="py-3 px-3 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="journal-table-body" class="divide-y divide-navy-600/50 text-xs sm:text-sm">
+                                    <!-- Popolato dinamicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================= -->
+                <!-- VISTA 4: ALTRE SEZIONI (STATS, INSIGHTS, PLAYBOOKS, ECC.) -->
+                <!-- ========================================================= -->
+                <div id="view-generic" class="hidden fade-in">
+                    <div class="bg-navy-800 border border-navy-600 rounded-xl p-8 text-center max-w-xl mx-auto my-8">
+                        <div class="w-12 h-12 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        </div>
+                        <h2 id="generic-view-title" class="text-lg font-bold text-white mb-2">Trading Analytics Module</h2>
+                        <p class="text-sm text-slate-400 mb-6">I dati del tuo account vengono analizzati automaticamente dal tuo calendario e dal diario operazioni. Aggiungi nuovi trade per arricchire le statistiche.</p>
+                        <div class="flex justify-center gap-3">
+                            <button onclick="switchView('calendar')" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold">Torna al Calendar</button>
+                            <button onclick="openUploadModal()" class="px-4 py-2 rounded-lg bg-navy-700 hover:bg-navy-600 text-slate-200 text-xs font-semibold">Registra un Trade</button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Pulsante Flottante AI Assistant in basso a destra (come nello screenshot) -->
+    <button onclick="showToast('AI Trading Coach: Ottima costanza nelle settimane 1, 2 e 4! Mantieni il controllo del drawdown il venerdì.')" title="AI Trading Insights" class="fixed bottom-5 right-5 w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-500 text-white shadow-xl shadow-purple-600/30 flex items-center justify-center hover:scale-105 transition z-30 cursor-pointer">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+    </button>
+
+    <!-- ========================================================= -->
+    <!-- MODALE 1: UPLOAD / AGGIUNGI NUOVO TRADE                   -->
+    <!-- ========================================================= -->
+    <div id="upload-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-navy-600">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Upload New Trade</h3>
+                </div>
+                <button onclick="closeUploadModal()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="trade-form" onsubmit="handleSaveTrade(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Date</label>
+                        <input type="date" id="trade-date" required class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Symbol / Asset</label>
+                        <input type="text" id="trade-symbol" placeholder="es. NQ, ES, XAUUSD, BTC" required value="NQ" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Direction</label>
+                        <select id="trade-direction" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="LONG">LONG (Buy)</option>
+                            <option value="SHORT">SHORT (Sell)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Net PnL ($)</label>
+                        <input type="number" step="0.01" id="trade-pnl" placeholder="es. 450.50 o -120.00" required class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Account</label>
+                    <select id="trade-account" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                        <option value="200K challenge">200K challenge</option>
+                        <option value="100K Prop">100K Prop</option>
+                        <option value="Personal Live">Personal Live</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Setup / Notes</label>
+                    <textarea id="trade-notes" rows="2" placeholder="Breakout sessione NY, rispetto del piano..." class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeUploadModal()" class="px-4 py-2 rounded-lg bg-navy-700 hover:bg-navy-600 text-xs font-medium text-slate-300">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-semibold text-white shadow-lg">Save Trade</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODALE 2: DETTAGLIO GIORNO (DAY DRAWER / MODAL)           -->
+    <!-- ========================================================= -->
+    <div id="day-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-lg p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-navy-600">
+                <div>
+                    <h3 id="day-modal-title" class="text-base font-bold text-white">July 1, 2025</h3>
+                    <p id="day-modal-subtitle" class="text-xs text-slate-400">3 trades | Net PnL: +$391.55</p>
+                </div>
+                <button onclick="closeDayModal()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Lista trade del giorno -->
+            <div id="day-trades-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 mb-4">
+                <!-- Popolato dinamicamente -->
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-navy-600">
+                <button id="btn-add-trade-on-day" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Trade to this Day
+                </button>
+                <button onclick="closeDayModal()" class="px-4 py-2 rounded-lg bg-navy-700 hover:bg-navy-600 text-slate-300 text-xs font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODALE 3: IMPOSTAZIONI & RESET DATI                       -->
+    <!-- ========================================================= -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+        <div class="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl fade-in">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-navy-600">
+                <h3 class="text-base font-bold text-white">Settings & Data Management</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                I tuoi dati sono salvati automaticamente nel browser (LocalStorage). Puoi ripristinare i dati dimostrativi di Luglio 2025 oppure svuotare il registro per iniziare da zero.
+            </p>
+            <div class="space-y-2.5">
+                <button onclick="resetDemoData()" class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center justify-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Ripristina Dati Demo (Luglio 2025)
+                </button>
+                <button onclick="clearAllTrades()" class="w-full py-2.5 px-4 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center justify-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Cancella Tutti i Trade
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-navy-750 border border-blue-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2 opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+        <i data-lucide="info" class="w-4 h-4 text-blue-400"></i>
+        <span id="toast-message">Notifica</span>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- LOGICA APPLICATIVA JAVASCRIPT                             -->
+    <!-- ========================================================= -->
+    <script>
+        const STORAGE_KEY = 'mypnl_trades_v1';
+        let trades = [];
+        let currentYear = 2025;
+        let currentMonth = 6; // 6 = Luglio (0-indexed)
+        let calendarMode = 'monthly';
+        let equityChartInstance = null;
+
+        const MONTH_NAMES = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
+        const WEEK_ORDINALS = ["First Week", "Second Week", "Third Week", "Fourth Week", "Fifth Week", "Sixth Week"];
+
+        // Genera i dati dimostrativi identici allo screenshot per Luglio 2025 (59 trade, $8132.11, 81% win rate)
+        function getDefaultJuly2025Trades() {
+            const demoSpec = [
+                // Settimana 1 (Luglio 1 - Luglio 5): Totale = $1835.27, 11 trades
+                { day: 1, items: [160.20, 145.10, 86.25] },          // 3 trades | 391.55
+                { day: 2, items: [145.84] },                         // 1 trade  | 145.84
+                { day: 3, items: [1360.32, 12.62] },                 // 2 trades | 1372.94
+                { day: 4, items: [-389.18] },                        // 1 trade  | -389.18
+                { day: 5, items: [110.00, 95.12, 64.00, 45.00] },    // 4 trades | 314.12
+
+                // Settimana 2 (Luglio 6 - Luglio 12): Totale = $1733.01, 13 trades
+                { day: 6, items: [8.28, 5.00] },                     // 2 trades | 13.28
+                { day: 7, items: [-40.02] },                         // 1 trade  | -40.02
+                { day: 9, items: [120.50, 95.22, 81.00, 60.00] },    // 4 trades | 356.72
+                { day: 10, items: [905.82, 240.59, 180.00, 112.00, 70.00] }, // 5 trades | 1508.41
+                { day: 12, items: [-105.38] },                       // 1 trade  | -105.38
+
+                // Settimana 3 (Luglio 13 - Luglio 19): Totale = -$56.67, 6 trades
+                { day: 13, items: [9.81] },                          // 1 trade  | 9.81
+                { day: 14, items: [21.52] },                         // 1 trade  | 21.52
+                { day: 15, items: [-430.88] },                       // 1 trade  | -430.88
+                { day: 17, items: [10.04] },                         // 1 trade  | 10.04
+                { day: 18, items: [45.82] },                         // 1 trade  | 45.82
+                { day: 19, items: [287.02] },                        // 1 trade  | 287.02
+
+                // Settimana 4 (Luglio 20 - Luglio 26): Totale = $3770.19, 18 trades
+                { day: 20, items: [420.04, 310.00, 205.00, 120.00] }, // 4 trades | 1055.04
+                { day: 21, items: [120.70, 86.00, 60.00, 40.00] },    // 4 trades | 306.70
+                { day: 22, items: [312.51, 190.00] },                 // 2 trades | 502.51
+                { day: 23, items: [980.30, 600.00] },                 // 2 trades | 1580.30
+                { day: 25, items: [-22.94, -15.00] },                 // 2 trades | -37.94
+                { day: 26, items: [140.58, 98.00, 75.00, 50.00] },    // 4 trades | 363.58
+
+                // Settimana 5 (Luglio 27 - Luglio 31): Totale = $850.31, 11 trades
+                { day: 27, items: [-12.65, -18.00, 8.00] },           // 3 trades | -22.65
+                { day: 28, items: [9.82] },                           // 1 trade  | 9.82
+                { day: 29, items: [190.14, 120.00] },                 // 2 trades | 310.14
+                { day: 30, items: [150.53, 110.00, 79.00, 50.00] },   // 4 trades | 389.53
+                { day: 31, items: [163.47] }                          // 1 trade  | 163.47
+            ];
+
+            const symbols = ['NQ', 'ES', 'XAUUSD', 'EURUSD', 'BTCUSD'];
+            const setups = ['NY Open Breakout', 'VWAP Reclaim', 'Liquidity Sweep', 'Trend Continuation', 'FVG Retest'];
+            const generated = [];
+            let idCounter = 1000;
+
+            demoSpec.forEach(entry => {
+                const dateStr = `2025-07-${String(entry.day).padStart(2, '0')}`;
+                entry.items.forEach((pnlVal, idx) => {
+                    generated.push({
+                        id: idCounter++,
+                        date: dateStr,
+                        symbol: symbols[(entry.day + idx) % symbols.length],
+                        direction: pnlVal >= 0 ? 'LONG' : 'SHORT',
+                        pnl: pnlVal,
+                        account: '200K challenge',
+                        notes: setups[(entry.day + idx) % setups.length]
+                    });
+                });
+            });
+
+            return generated;
+        }
+
+        // Inizializzazione dati da LocalStorage
+        function loadTrades() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    trades = JSON.parse(saved);
+                } catch (e) {
+                    trades = getDefaultJuly2025Trades();
+                }
+            } else {
+                trades = getDefaultJuly2025Trades();
+                saveTrades();
+            }
+        }
+
+        function saveTrades() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+        }
+
+        // Filtra i trade in base ad Account e Filtro Direzione/Esito
+        function getFilteredTrades() {
+            const selectedAccount = document.getElementById('account-select').value;
+            const dirFilter = document.getElementById('direction-filter').value;
+
+            return trades.filter(t => {
+                const matchAcc = t.account === selectedAccount;
+                if (!matchAcc) return false;
+                if (dirFilter === 'LONG') return t.direction === 'LONG';
+                if (dirFilter === 'SHORT') return t.direction === 'SHORT';
+                if (dirFilter === 'WIN') return t.pnl > 0;
+                if (dirFilter === 'LOSS') return t.pnl < 0;
+                return true;
+            });
+        }
+
+        // Restituisce dimensione account selezionato
+        function getAccountSize() {
+            const sel = document.getElementById('account-select');
+            const opt = sel.options[sel.selectedIndex];
+            return parseFloat(opt.getAttribute('data-size')) || 200000;
+        }
+
+        function formatCurrency(val, includePlus = false) {
+            const absVal = Math.abs(val).toFixed(2);
+            if (val < 0) return `-$${absVal}`;
+            return `${includePlus ? '+' : ''}$${absVal}`;
+        }
+
+        // Aggiorna tutti i componenti UI
+        function renderAll() {
+            updateAccountHeaderBadge();
+            renderCalendarAndKPIs();
+            renderJournalTable();
+            renderDashboard();
+            lucide.createIcons();
+        }
+
+        function updateAccountHeaderBadge() {
+            const sel = document.getElementById('account-select');
+            const opt = sel.options[sel.selectedIndex];
+            const base = parseFloat(opt.getAttribute('data-base')) || 260000;
+            const accountTrades = trades.filter(t => t.account === sel.value);
+            const totalPnL = accountTrades.reduce((acc, t) => acc + t.pnl, 0);
+            // Per Luglio 2025 demo manteniamo $+260.0k di base + eventuali delta aggiunti dall'utente
+            const demoBaseline = sel.value === '200K challenge' ? 8132.11 : 0;
+            const currentBal = (base + (totalPnL - demoBaseline)) / 1000;
+            const formatted = `$+${currentBal.toFixed(1)}k`;
+            document.getElementById('account-balance-badge').textContent = formatted;
+            document.getElementById('account-active-badge').textContent = formatted;
+        }
+
+        function renderCalendarAndKPIs() {
+            const filtered = getFilteredTrades();
+            const accSize = getAccountSize();
+
+            // Filtra per anno e mese correnti
+            const monthTrades = filtered.filter(t => {
+                const [y, m] = t.date.split('-').map(Number);
+                return y === currentYear && (m - 1) === currentMonth;
+            });
+
+            // Calcolo KPI Mensili
+            const totalPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
+            const pnlPct = (totalPnL / accSize) * 100;
+            const tradeCount = monthTrades.length;
+            const winCount = monthTrades.filter(t => t.pnl > 0).length;
+            const winRate = tradeCount > 0 ? Math.round((winCount / tradeCount) * 100) : 0;
+
+            const kpiPnlEl = document.getElementById('kpi-pnl');
+            kpiPnlEl.textContent = formatCurrency(totalPnL);
+            kpiPnlEl.className = `text-base sm:text-lg font-bold tracking-tight ${totalPnL >= 0 ? 'text-profit-text' : 'text-loss-text'}`;
+
+            const kpiPctEl = document.getElementById('kpi-pnl-pct');
+            kpiPctEl.textContent = `${pnlPct.toFixed(1)}%`;
+            kpiPctEl.className = `text-base sm:text-lg font-bold tracking-tight ${pnlPct >= 0 ? 'text-profit-text' : 'text-loss-text'}`;
+
+            document.getElementById('kpi-trades').textContent = tradeCount;
+            document.getElementById('kpi-winrate').textContent = `${winRate}%`;
+
+            // Costruzione Griglia Calendario Mensile
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            const gridEl = document.getElementById('calendar-days-grid');
+            gridEl.innerHTML = '';
+
+            // Raggruppa trade per giorno
+            const tradesByDay = {};
+            monthTrades.forEach(t => {
+                const d = parseInt(t.date.split('-')[2], 10);
+                if (!tradesByDay[d]) tradesByDay[d] = [];
+                tradesByDay[d].push(t);
+            });
+
+            // Calcolo celle totali (multiplo di 7)
+            const totalCells = Math.ceil((firstDayOfMonth + daysInMonth) / 7) * 7;
+            const weeksData = [];
+
+            for (let cellIdx = 0; cellIdx < totalCells; cellIdx++) {
+                const weekIdx = Math.floor(cellIdx / 7);
+                if (!weeksData[weekIdx]) {
+                    weeksData[weekIdx] = { trades: [], pnl: 0 };
+                }
+
+                const dayNumber = cellIdx - firstDayOfMonth + 1;
+
+                if (dayNumber < 1 || dayNumber > daysInMonth) {
+                    // Cella vuota con righe diagonali
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'h-24 sm:h-28 rounded-lg border border-navy-600/50 striped-day';
+                    gridEl.appendChild(emptyCell);
+                } else {
+                    const dayTrades = tradesByDay[dayNumber] || [];
+                    const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
+                    const dayPct = (dayPnL / accSize) * 100;
+
+                    weeksData[weekIdx].trades.push(...dayTrades);
+                    weeksData[weekIdx].pnl += dayPnL;
+
+                    const cell = document.createElement('div');
+                    const dateISO = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+                    cell.onclick = () => openDayModal(dateISO, dayNumber);
+
+                    let stateClasses = 'bg-navy-750/70 border-navy-600/70 hover:border-slate-500';
+                    if (dayTrades.length > 0) {
+                        if (dayPnL > 0) {
+                            stateClasses = 'bg-profit-bg border-profit-border hover:border-profit-text/70';
+                        } else if (dayPnL < 0) {
+                            stateClasses = 'bg-loss-bg border-loss-border hover:border-loss-text/70';
+                        }
+                    }
+
+                    cell.className = `h-24 sm:h-28 rounded-lg border p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:scale-[1.01] ${stateClasses}`;
+
+                    if (dayTrades.length > 0) {
+                        const pnlColor = dayPnL >= 0 ? 'text-profit-text' : 'text-loss-text';
+                        cell.innerHTML = `
+                            <div class="text-xs font-semibold text-slate-200 text-center">${dayNumber}</div>
+                            <div class="text-right">
+                                <div class="text-xs sm:text-sm font-bold ${pnlColor} leading-tight">${formatCurrency(dayPnL)}</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">${dayTrades.length} trades | ${dayPct.toFixed(1)}%</div>
+                            </div>
+                        `;
+                    } else {
+                        cell.innerHTML = `
+                            <div class="text-xs font-medium text-slate-400 text-center my-auto">${dayNumber}</div>
+                        `;
+                    }
+
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            // Render Colonna WEEKLY SUMMARY + Tabella WEEKLY INFO
+            renderWeeklyPanels(weeksData, accSize);
+
+            // Render Vista Annuale se attiva
+            if (calendarMode === 'yearly') {
+                renderYearlyGrid(filtered, accSize);
+            }
+        }
+
+        function renderWeeklyPanels(weeksData, accSize) {
+            const summaryContainer = document.getElementById('weekly-summary-cards');
+            const tableBody = document.getElementById('weekly-info-tbody');
+            summaryContainer.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            weeksData.forEach((w, idx) => {
+                const wPnL = w.pnl;
+                const wCount = w.trades.length;
+                const wPct = (wPnL / accSize) * 100;
+                const pnlColor = wPnL > 0 ? 'text-profit-text' : (wPnL < 0 ? 'text-loss-text' : 'text-slate-300');
+
+                // Card nella colonna sinistra
+                const card = document.createElement('div');
+                card.className = 'bg-navy-750/90 border border-navy-600/80 rounded-lg p-2.5 flex flex-col justify-center items-center text-center min-h-[96px]';
+                card.innerHTML = `
+                    <div class="text-[11px] font-medium text-slate-400 mb-1">Week ${idx + 1}</div>
+                    <div class="text-sm font-bold ${pnlColor}">${formatCurrency(wPnL)}</div>
+                    <div class="text-[10px] text-slate-400 mt-1">${wPct.toFixed(1)}% | ${wCount} trades</div>
+                `;
+                summaryContainer.appendChild(card);
+
+                // Calcoli per riga tabella Weekly Info
+                const wins = w.trades.filter(t => t.pnl > 0);
+                const losses = w.trades.filter(t => t.pnl < 0);
+                const winRate = wCount > 0 ? Math.round((wins.length / wCount) * 100) : 0;
+                const avgGain = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+                const avgLoss = losses.length > 0 ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
+                const maxGain = wins.length > 0 ? Math.max(...wins.map(t => t.pnl)) : 0;
+                const maxLoss = losses.length > 0 ? Math.min(...losses.map(t => t.pnl)) : 0;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-navy-750/60 transition';
+                tr.innerHTML = `
+                    <td class="py-3.5 px-3 font-semibold text-slate-200">${WEEK_ORDINALS[idx] || `Week ${idx + 1}`}</td>
+                    <td class="py-3.5 px-3 text-center text-slate-300">${wCount}</td>
+                    <td class="py-3.5 px-3 text-center text-slate-300">${winRate}%</td>
+                    <td class="py-3.5 px-3 text-right text-profit-text">${formatCurrency(avgGain)}</td>
+                    <td class="py-3.5 px-3 text-right text-loss-text">${avgLoss < 0 ? formatCurrency(avgLoss) : '$0.00'}</td>
+                    <td class="py-3.5 px-3 text-right text-profit-text">${formatCurrency(maxGain)}</td>
+                    <td class="py-3.5 px-3 text-right text-loss-text">${maxLoss < 0 ? formatCurrency(maxLoss) : '$0.00'}</td>
+                    <td class="py-3.5 px-3 text-right font-bold ${pnlColor}">${formatCurrency(wPnL)}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function renderYearlyGrid(filteredTrades, accSize) {
+            const container = document.getElementById('yearly-calendar-container');
+            container.innerHTML = '';
+
+            MONTH_NAMES.forEach((mName, mIdx) => {
+                const mTrades = filteredTrades.filter(t => {
+                    const [y, m] = t.date.split('-').map(Number);
+                    return y === currentYear && (m - 1) === mIdx;
+                });
+                const mPnL = mTrades.reduce((s, t) => s + t.pnl, 0);
+                const mPct = (mPnL / accSize) * 100;
+                const isActive = mIdx === currentMonth;
+
+                let bgClass = 'bg-navy-800 border-navy-600';
+                let textClass = 'text-slate-300';
+                if (mTrades.length > 0) {
+                    bgClass = mPnL >= 0 ? 'bg-profit-bg/60 border-profit-border' : 'bg-loss-bg/60 border-loss-border';
+                    textClass = mPnL >= 0 ? 'text-profit-text' : 'text-loss-text';
+                }
+
+                const card = document.createElement('div');
+                card.onclick = () => {
+                    currentMonth = mIdx;
+                    document.getElementById('month-select').value = mIdx;
+                    setCalendarMode('monthly');
+                };
+                card.className = `${bgClass} ${isActive ? 'ring-2 ring-blue-500' : ''} border rounded-xl p-4 cursor-pointer hover:scale-[1.02] transition`;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-sm text-white">${mName} ${currentYear}</span>
+                        <span class="text-xs text-slate-400">${mTrades.length} trades</span>
+                    </div>
+                    <div class="text-xl font-bold ${textClass}">${formatCurrency(mPnL)}</div>
+                    <div class="text-xs text-slate-400 mt-1">Return: ${mPct.toFixed(2)}%</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderJournalTable() {
+            const tbody = document.getElementById('journal-table-body');
+            const filtered = [...getFilteredTrades()].sort((a, b) => b.date.localeCompare(a.date));
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Nessun trade trovato con i filtri selezionati.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-navy-750/60 transition';
+                const pnlColor = t.pnl >= 0 ? 'text-profit-text' : 'text-loss-text';
+                const badgeClass = t.direction === 'LONG'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-slate-300 font-medium">${t.date}</td>
+                    <td class="py-3 px-3 font-bold text-white">${t.symbol}</td>
+                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${t.direction}</span></td>
+                    <td class="py-3 px-3 text-slate-400 text-xs">${t.account}</td>
+                    <td class="py-3 px-3 text-slate-400 text-xs max-w-xs truncate">${t.notes || '-'}</td>
+                    <td class="py-3 px-3 text-right font-bold ${pnlColor}">${formatCurrency(t.pnl, true)}</td>
+                    <td class="py-3 px-3 text-center">
+                        <button onclick="deleteTrade(${t.id})" title="Elimina trade" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-700 transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDashboard() {
+            const filtered = [...getFilteredTrades()].sort((a, b) => a.date.localeCompare(b.date));
+            const totalPnL = filtered.reduce((s, t) => s + t.pnl, 0);
+            const wins = filtered.filter(t => t.pnl > 0);
+            const losses = filtered.filter(t => t.pnl < 0);
+            const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+            const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+            const pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : '∞';
+            const wr = filtered.length > 0 ? Math.round((wins.length / filtered.length) * 100) : 0;
+            const exp = filtered.length > 0 ? totalPnL / filtered.length : 0;
+
+            document.getElementById('dash-total-pnl').textContent = formatCurrency(totalPnL);
+            document.getElementById('dash-profit-factor').textContent = pf;
+            document.getElementById('dash-winrate').textContent = `${wr}%`;
+            document.getElementById('dash-expectancy').textContent = formatCurrency(exp, true);
+
+            const ctx = document.getElementById('equityChart');
+            if (!ctx) return;
+
+            let running = 0;
+            const labels = [];
+            const dataPoints = [];
+
+            filtered.forEach((t, idx) => {
+                running += t.pnl;
+                labels.push(`${t.date.slice(5)} (#${idx + 1})`);
+                dataPoints.push(Number(running.toFixed(2)));
+            });
+
+            if (equityChartInstance) {
+                equityChartInstance.destroy();
+            }
+
+            equityChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative PnL ($)',
+                        data: dataPoints,
+                        borderColor: '#34d399',
+                        backgroundColor: 'rgba(52, 211, 153, 0.12)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#1e2436' },
+                            ticks: { color: '#94a3b8', maxTicksLimit: 10, font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: '#1e2436' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Navigazione tra viste sidebar
+        function switchView(viewName) {
+            const views = ['calendar', 'dashboard', 'journal', 'generic'];
+            views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/25');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeBtn = document.querySelector(`[data-nav="${viewName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/25');
+            }
+
+            const titles = {
+                calendar: ['Calendar', 'calendar'],
+                dashboard: ['Dashboard', 'layout-grid'],
+                stats: ['Stats & Performance', 'bar-chart-2'],
+                journal: ['Trade Journal', 'book-open'],
+                insights: ['Trading Insights', 'sparkles'],
+                diary: ['Trade Diary', 'file-text'],
+                playbooks: ['Playbooks', 'target'],
+                watchlist: ['Watchlist', 'trending-up'],
+                backtesting: ['Backtesting', 'rewind']
+            };
+
+            const [titleText, iconName] = titles[viewName] || ['Calendar', 'calendar'];
+            document.getElementById('header-title').textContent = titleText;
+            document.getElementById('header-icon').setAttribute('data-lucide', iconName);
+
+            if (viewName === 'calendar') {
+                document.getElementById('view-calendar').classList.remove('hidden');
+            } else if (viewName === 'dashboard' || viewName === 'stats') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                renderDashboard();
+            } else if (viewName === 'journal') {
+                document.getElementById('view-journal').classList.remove('hidden');
+            } else {
+                document.getElementById('generic-view-title').textContent = titleText;
+                document.getElementById('view-generic').classList.remove('hidden');
+            }
+
+            // Chiude sidebar mobile dopo selezione
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mobile-overlay').classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        function setCalendarMode(mode) {
+            calendarMode = mode;
+            const btnMonthly = document.getElementById('btn-mode-monthly');
+            const btnYearly = document.getElementById('btn-mode-yearly');
+            const monthlyCont = document.getElementById('monthly-calendar-container');
+            const yearlyCont = document.getElementById('yearly-calendar-container');
+
+            if (mode === 'monthly') {
+                btnMonthly.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white shadow-xs transition';
+                btnYearly.className = 'px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition';
+                monthlyCont.classList.remove('hidden');
+                yearlyCont.classList.add('hidden');
+            } else {
+                btnYearly.className = 'px-3.5 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white shadow-xs transition';
+                btnMonthly.className = 'px-3.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition';
+                monthlyCont.classList.add('hidden');
+                yearlyCont.classList.remove('hidden');
+            }
+            renderCalendarAndKPIs();
+        }
+
+        function changeDateSelection() {
+            currentYear = parseInt(document.getElementById('year-select').value, 10);
+            currentMonth = parseInt(document.getElementById('month-select').value, 10);
+            renderCalendarAndKPIs();
+        }
+
+        function navigateMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear -= 1;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear += 1;
+            }
+            document.getElementById('year-select').value = currentYear;
+            document.getElementById('month-select').value = currentMonth;
+            renderCalendarAndKPIs();
+        }
+
+        function changeAccount() {
+            const acc = document.getElementById('account-select').value;
+            document.getElementById('trade-account').value = acc;
+            renderAll();
+            showToast(`Account attivo: ${acc}`);
+        }
+
+        // Gestione Modali
+        function openUploadModal(prefillDate = null) {
+            const modal = document.getElementById('upload-modal');
+            const defaultDate = prefillDate || `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-15`;
+            document.getElementById('trade-date').value = defaultDate;
+            document.getElementById('trade-account').value = document.getElementById('account-select').value;
+            document.getElementById('trade-pnl').value = '';
+            document.getElementById('trade-notes').value = '';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeUploadModal() {
+            const modal = document.getElementById('upload-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleSaveTrade(e) {
+            e.preventDefault();
+            const dateVal = document.getElementById('trade-date').value;
+            const symbolVal = document.getElementById('trade-symbol').value.trim().toUpperCase();
+            const dirVal = document.getElementById('trade-direction').value;
+            const pnlVal = parseFloat(document.getElementById('trade-pnl').value);
+            const accVal = document.getElementById('trade-account').value;
+            const notesVal = document.getElementById('trade-notes').value.trim();
+
+            if (!dateVal || isNaN(pnlVal)) return;
+
+            const newTrade = {
+                id: Date.now(),
+                date: dateVal,
+                symbol: symbolVal || 'NQ',
+                direction: dirVal,
+                pnl: pnlVal,
+                account: accVal,
+                notes: notesVal
+            };
+
+            trades.push(newTrade);
+            saveTrades();
+
+            // Sposta il calendario sul mese del trade inserito
+            const [y, m] = dateVal.split('-').map(Number);
+            currentYear = y;
+            currentMonth = m - 1;
+            document.getElementById('year-select').value = currentYear;
+            document.getElementById('month-select').value = currentMonth;
+            document.getElementById('account-select').value = accVal;
+
+            closeUploadModal();
+            renderAll();
+            showToast(`Trade ${symbolVal} (${formatCurrency(pnlVal, true)}) aggiunto!`);
+        }
+
+        function openDayModal(dateISO, dayNumber) {
+            const modal = document.getElementById('day-modal');
+            const filtered = getFilteredTrades().filter(t => t.date === dateISO);
+            const dayPnL = filtered.reduce((s, t) => s + t.pnl, 0);
+
+            document.getElementById('day-modal-title').textContent = `${MONTH_NAMES[currentMonth]} ${dayNumber}, ${currentYear}`;
+            document.getElementById('day-modal-subtitle').textContent = `${filtered.length} trades | Net PnL: ${formatCurrency(dayPnL, true)}`;
+
+            const listEl = document.getElementById('day-trades-list');
+            listEl.innerHTML = '';
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 bg-navy-900/60 rounded-xl border border-navy-600/50">Nessun trade registrato in questa giornata.</div>`;
+            } else {
+                filtered.forEach(t => {
+                    const pnlColor = t.pnl >= 0 ? 'text-profit-text' : 'text-loss-text';
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between bg-navy-900 border border-navy-600 rounded-xl p-3';
+                    item.innerHTML = `
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-xs text-white">${t.symbol}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-navy-750 text-slate-300 font-semibold">${t.direction}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">${t.notes || 'Standard execution'}</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-sm ${pnlColor}">${formatCurrency(t.pnl, true)}</span>
+                            <button onclick="deleteTrade(${t.id}, '${dateISO}', ${dayNumber})" class="p-1 text-slate-400 hover:text-rose-400 transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    listEl.appendChild(item);
+                });
+            }
+
+            document.getElementById('btn-add-trade-on-day').onclick = () => {
+                closeDayModal();
+                openUploadModal(dateISO);
+            };
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function closeDayModal() {
+            const modal = document.getElementById('day-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function deleteTrade(id, reopenDateISO = null, dayNum = null) {
+            trades = trades.filter(t => t.id !== id);
+            saveTrades();
+            renderAll();
+            showToast('Trade eliminato');
+            if (reopenDateISO && dayNum) {
+                openDayModal(reopenDateISO, dayNum);
+            }
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('settings-modal').classList.add('flex');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+            document.getElementById('settings-modal').classList.remove('flex');
+        }
+
+        function resetDemoData() {
+            trades = getDefaultJuly2025Trades();
+            saveTrades();
+            currentYear = 2025;
+            currentMonth = 6;
+            document.getElementById('year-select').value = 2025;
+            document.getElementById('month-select').value = 6;
+            document.getElementById('account-select').value = '200K challenge';
+            closeSettingsModal();
+            renderAll();
+            showToast('Dati demo di Luglio 2025 ripristinati!');
+        }
+
+        function clearAllTrades() {
+            trades = [];
+            saveTrades();
+            closeSettingsModal();
+            renderAll();
+            showToast('Tutti i trade sono stati rimossi');
+        }
+
+        function toggleMobileSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('mobile-overlay');
+            sb.classList.toggle('-translate-x-full');
+            ov.classList.toggle('hidden');
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 2800);
+        }
+
+        // Avvio applicazione
+        window.addEventListener('DOMContentLoaded', () => {
+            loadTrades();
+            renderAll();
+        });
+    </script>
+</body>
+</html>
