@@ -286,27 +286,12 @@
                         </select>
                     </div>
 
-                    <!-- Selettore Account -->
-                    <div class="flex items-center bg-navy-750 border border-navy-600 rounded-lg px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-200 gap-2 hover:border-slate-500 transition">
-                        <i data-lucide="wallet" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                        <option value="200K challenge" data-size="200000" data-base="0" class="bg-navy-800">200K challenge</option>
-<option value="100K Prop" data-size="100000" data-base="0" class="bg-navy-800">100K Prop</option>
-<option value="Personal Live" data-size="50000" data-base="0" class="bg-navy-800">Personal Live</option>
-                            <option value="Personal Live" data-size="50000" data-base="62500" class="bg-navy-800">Personal Live</option>
-                        </select>
-                    </div>
-
-                    <!-- Badge Saldo Account -->
-                    <div class="hidden xl:flex items-center bg-navy-750 border border-navy-600 rounded-lg px-3 py-1 gap-3">
-                        <span id="account-balance-badge" class="text-sm font-bold text-profit-text">$+0.0k</span>
-                        <div class="text-[10px] leading-tight border-l border-navy-600 pl-2.5">
-                            <div class="text-slate-400">Cash: <span class="text-blue-400 font-medium">$0.00</span></div>
-                            <div class="text-slate-400">Active: <span id="account-active-badge" class="text-profit-text font-medium">$+0.0k</span></div>
-                        </div>
-                        <button onclick="openSettingsModal()" title="Modifica Account" class="text-slate-400 hover:text-white transition">
-                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                        </button>
-                    </div>
+<!-- Account interno: mantenuto per compatibilità -->
+<select id="account-select" class="hidden">
+    <option value="My Account" data-size="0" data-base="0">
+        My Account
+    </option>
+</select>
 
                     <!-- Icone Tema & Notifiche -->
                     <button onclick="showToast('Tema Dark Navy ottimizzato attivo')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-750 transition hidden sm:flex">
