@@ -666,6 +666,58 @@
 
 </div>
 
+<!-- BACKTESTING PAGE -->
+<div id="view-backtesting" class="hidden space-y-5 fade-in">
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h2 class="text-lg font-bold text-white mb-1">Backtesting</h2>
+        <p class="text-xs text-slate-400">
+            Testa le tue strategie sui dati storici e analizza le loro performance.
+        </p>
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-4">Crea una strategia</h3>
+
+        <form id="backtest-strategy-form" onsubmit="handleCreateBacktestStrategy(event)" class="space-y-3">
+            <input id="backtest-strategy-name" required placeholder="Nome strategia"
+                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
+
+            <input id="backtest-symbol" required placeholder="Mercato (es. NQ, ES, MNQ)"
+                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
+
+            <input id="backtest-timeframe" placeholder="Timeframe (es. 5 minuti)"
+                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
+
+            <input id="backtest-point-value" type="number" step="0.01" min="0.01" required
+                placeholder="Valore per punto (es. NQ = 20)"
+                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
+
+            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-3 w-full font-semibold">
+                Crea strategia
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-3">Le tue strategie</h3>
+        <div id="backtest-strategies-list" class="text-sm text-slate-400">
+            Nessuna strategia ancora creata.
+        </div>
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-3">Operazioni storiche</h3>
+        <p class="text-xs text-slate-400">
+            Qui inseriremo le operazioni della strategia selezionata e calcoleremo automaticamente i risultati.
+        </p>
+        <div id="backtest-trades-list" class="mt-4 text-sm text-slate-400">
+            Seleziona una strategia per iniziare.
+        </div>
+    </div>
+
+</div>
+
 
                 <!-- ========================================================= -->
                 <!-- VISTA 3: TRADE JOURNAL (ELENCO COMPLETO OPERAZIONI)       -->
