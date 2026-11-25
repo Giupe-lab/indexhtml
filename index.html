@@ -286,13 +286,20 @@
                         </select>
                     </div>
 
-<!-- Account interno: mantenuto per compatibilità -->
+<!-- Capitale personalizzato -->
 <select id="account-select" class="hidden">
     <option value="My Account" data-size="0" data-base="0">
         My Account
     </option>
 </select>
 
+<button onclick="openSettingsModal()"
+    class="flex items-center gap-2 bg-navy-750 border border-navy-600 rounded-lg px-3 py-2 text-sm text-slate-200 hover:border-blue-500 transition">
+    <i data-lucide="wallet" class="w-4 h-4 text-blue-400"></i>
+<span>Capitale</span>
+<span id="capital-header-value" class="text-emerald-400 font-semibold">$0.00</span>
+<i data-lucide="settings" class="w-3.5 h-3.5 text-slate-400"></i>
+</button>
                     <!-- Icone Tema & Notifiche -->
                     <button onclick="showToast('Tema Dark Navy ottimizzato attivo')" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-navy-750 transition hidden sm:flex">
                         <i data-lucide="sun" class="w-4 h-4"></i>
@@ -914,27 +921,53 @@
     <!-- ========================================================= -->
     <!-- MODALE 3: IMPOSTAZIONI & RESET DATI                       -->
     <!-- ========================================================= -->
-    <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
-        <div class="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl fade-in">
-            <div class="flex items-center justify-between pb-3 mb-4 border-b border-navy-600">
-                <h3 class="text-base font-bold text-white">Settings & Data Management</h3>
-                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
-                I tuoi dati sono salvati automaticamente nel browser (LocalStorage). Puoi ripristinare i dati dimostrativi di Luglio 2025 oppure svuotare il registro per iniziare da zero.
-            </p>
-            <div class="space-y-2.5">
-                <button onclick="resetDemoData()" class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center justify-center gap-2">
-                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Ripristina Dati Demo (Luglio 2025)
-                </button>
-                <button onclick="clearAllTrades()" class="w-full py-2.5 px-4 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center justify-center gap-2">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i> Cancella Tutti i Trade
-                </button>
-            </div>
+    
+<div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-navy-800 border border-navy-600 rounded-2xl w-full max-w-md p-6 shadow-2xl fade-in">
+
+        <div class="flex items-center justify-between pb-3 mb-5 border-b border-navy-600">
+            <h3 class="text-base font-bold text-white">Impostazioni My PnL</h3>
+            <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
         </div>
+
+        <div class="mb-5">
+            <label for="initial-capital-input" class="block text-sm font-semibold text-white mb-2">
+                Capitale iniziale
+            </label>
+
+            <div class="flex items-center bg-[#05070F] border border-navy-600 rounded-lg px-4 py-3">
+                <span class="text-slate-400 mr-2">$</span>
+                <input
+                    id="initial-capital-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Es. 25000"
+                    class="w-full bg-transparent text-white outline-none"
+                >
+            </div>
+
+            <p class="text-xs text-slate-400 mt-2">
+                Inserisci il capitale del tuo conto di trading.
+            </p>
+        </div>
+
+        <button onclick="saveInitialCapital()" class="w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold">
+            Salva capitale
+        </button>
+
+        <div class="border-t border-navy-600 mt-5 pt-4">
+            <button onclick="clearAllTrades()" class="w-full py-2.5 px-4 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center justify-center gap-2">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Cancella tutti i trade
+            </button>
+        </div>
+
     </div>
+</div>
+
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-navy-750 border border-blue-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2 opacity-0 pointer-events-none transition-opacity duration-300 z-50">
@@ -1079,20 +1112,37 @@ const WEEK_ORDINALS = [
 }
         // Restituisce dimensione account selezionato
         function getAccountSize() {
-            const sel = document.getElementById('account-select');
-            const opt = sel.options[sel.selectedIndex];
-            return parseFloat(opt.getAttribute('data-size')) || 200000;
-        }
+    if (!currentUserId) return 0;
+
+    const storageKey = 'mypnl_initial_capital_' + currentUserId;
+    const capital = Number(localStorage.getItem(storageKey));
+
+    return Number.isFinite(capital) && capital > 0 ? capital : 0;
+}
 
         function formatCurrency(val, includePlus = false) {
             const absVal = Math.abs(val).toFixed(2);
             if (val < 0) return `-$${absVal}`;
             return `${includePlus ? '+' : ''}$${absVal}`;
         }
+function updateCapitalHeader() {
+    const display = document.getElementById('capital-header-value');
 
+    if (!display) return;
+
+    const capital = getAccountSize();
+
+    display.textContent = capital > 0
+        ? `$${capital.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })}`
+        : '$0.00';
+}
         // Aggiorna tutti i componenti UI
         function renderAll() {
-            updateAccountHeaderBadge();
+    updateCapitalHeader();
+    updateAccountHeaderBadge();
             renderCalendarAndKPIs();
             renderJournalTable();
             renderDashboard();
@@ -1139,7 +1189,7 @@ const WEEK_ORDINALS = [
 
             // Calcolo KPI Mensili
             const totalPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
-            const pnlPct = (totalPnL / accSize) * 100;
+            const pnlPct = accSize > 0 ? (totalPnL / accSize) * 100 : 0;
             const tradeCount = monthTrades.length;
             const winCount = monthTrades.filter(t => t.pnl > 0).length;
             const winRate = tradeCount > 0 ? Math.round((winCount / tradeCount) * 100) : 0;
@@ -1190,7 +1240,8 @@ const WEEK_ORDINALS = [
                 } else {
                     const dayTrades = tradesByDay[dayNumber] || [];
                     const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
-                    const dayPct = (dayPnL / accSize) * 100;
+                    const dayPct = accSize > 0 ? (dayPnL / accSize) * 100 : 0;
+                    
 
                     weeksData[weekIdx].trades.push(...dayTrades);
                     weeksData[weekIdx].pnl += dayPnL;
@@ -1295,8 +1346,8 @@ const WEEK_ORDINALS = [
                     return y === currentYear && (m - 1) === mIdx;
                 });
                 const mPnL = mTrades.reduce((s, t) => s + t.pnl, 0);
-                const mPct = (mPnL / accSize) * 100;
-                const isActive = mIdx === currentMonth;
+                const mPct = accSize > 0 ? (mPnL / accSize) * 100 : 0;
+                 const isActive = mIdx === currentMonth;
 
                 let bgClass = 'bg-navy-800 border-navy-600';
                 let textClass = 'text-slate-300';
@@ -2283,10 +2334,48 @@ function renderBacktesting() {
             }
         }
 
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('settings-modal').classList.add('flex');
-        }
+       
+async function openSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    const input = document.getElementById('initial-capital-input');
+
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error || !data.user) {
+        showToast('Impossibile identificare il tuo account');
+        return;
+    }
+
+    const storageKey = 'mypnl_initial_capital_' + data.user.id;
+    input.value = localStorage.getItem(storageKey) || '';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+async function saveInitialCapital() {
+    const input = document.getElementById('initial-capital-input');
+    const amount = Number(input.value);
+
+    if (!input.value.trim() || !Number.isFinite(amount) || amount <= 0) {
+        showToast('Inserisci un capitale valido');
+        return;
+    }
+
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error || !data.user) {
+        showToast('Errore durante il salvataggio');
+        return;
+    }
+
+    const storageKey = 'mypnl_initial_capital_' + data.user.id;
+
+   localStorage.setItem(storageKey, amount.toString());
+
+closeSettingsModal();
+renderAll();
+showToast('Capitale iniziale salvato!');
 
         function closeSettingsModal() {
             document.getElementById('settings-modal').classList.add('hidden');
@@ -2342,7 +2431,8 @@ function renderBacktesting() {
     }
 
     window.location.reload();
-}     
+} 
+        let currentUserId = null;
 // AUTENTICAZIONE MY PNL
 window.addEventListener('DOMContentLoaded', async () => {
 
@@ -2383,11 +2473,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function enterApp() {
-        authScreen.classList.add('hidden');
-        loadTrades();
-        renderAll();
+    async function enterApp() {
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error || !data.user) {
+        showAuthError('Impossibile identificare il tuo account.');
+        return;
     }
+
+    currentUserId = data.user.id;
+
+    authScreen.classList.add('hidden');
+    loadTrades();
+    renderAll();
+}
 
     authToggle.addEventListener('click', () => {
         setAuthMode(authMode === 'login' ? 'signup' : 'login');
