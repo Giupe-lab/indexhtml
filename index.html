@@ -910,6 +910,15 @@
     <!-- LOGICA APPLICATIVA JAVASCRIPT                             -->
     <!-- ========================================================= -->
     <script>
+        // COLLEGAMENTO SUPABASE
+        const SUPABASE_URL = 'https://gquznadnquwbkmieaema.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_u6WNqQR_Uplb6PDh6anYTA_r_d9b_0A';
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
         const STORAGE_KEY = 'mypnl_trades_v1';
 let trades = [];
 let currentYear = 2026
