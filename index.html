@@ -447,7 +447,75 @@
                             <canvas id="equityChart"></canvas>
                         </div>
                     </div>
-                </div>
+                </div><!-- STATS & PERFORMANCE -->
+<div id="view-stats" class="hidden space-y-5 fade-in">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Total Trades</div>
+            <div id="stats-total-trades" class="text-2xl font-bold text-white">0</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Win Rate</div>
+            <div id="stats-winrate" class="text-2xl font-bold text-blue-400">0%</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Average Win</div>
+            <div id="stats-average-win" class="text-2xl font-bold text-profit-text">$0.00</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Average Loss</div>
+            <div id="stats-average-loss" class="text-2xl font-bold text-red-400">$0.00</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Profit Factor</div>
+            <div id="stats-profit-factor" class="text-2xl font-bold text-white">0.00</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Expectancy</div>
+            <div id="stats-expectancy" class="text-2xl font-bold text-purple-400">$0.00</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Best Trade</div>
+            <div id="stats-best-trade" class="text-2xl font-bold text-profit-text">$0.00</div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-4">
+            <div class="text-xs text-slate-400 mb-1">Worst Trade</div>
+            <div id="stats-worst-trade" class="text-2xl font-bold text-red-400">$0.00</div>
+        </div>
+
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-4">LONG vs SHORT Performance</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-navy-900 rounded-lg p-4">
+                <div class="text-xs text-slate-400 mb-2">LONG PnL</div>
+                <div id="stats-long-pnl" class="text-xl font-bold text-profit-text">$0.00</div>
+            </div>
+            <div class="bg-navy-900 rounded-lg p-4">
+                <div class="text-xs text-slate-400 mb-2">SHORT PnL</div>
+                <div id="stats-short-pnl" class="text-xl font-bold text-blue-400">$0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-4">Monthly Performance</h3>
+        <div class="h-72 w-full">
+            <canvas id="statsMonthlyChart"></canvas>
+        </div>
+    </div>
+
+</div>
 
                 <!-- ========================================================= -->
                 <!-- VISTA 3: TRADE JOURNAL (ELENCO COMPLETO OPERAZIONI)       -->
@@ -638,20 +706,24 @@
     <!-- ========================================================= -->
     <!-- LOGICA APPLICATIVA JAVASCRIPT                             -->
     <!-- ========================================================= -->
-    <script>
-        const STORAGE_KEY = 'mypnl_trades_v1';
-        let trades = [];
-        let currentYear = 2025;
-        let currentMonth = 6; // 6 = Luglio (0-indexed)
-        let calendarMode = 'monthly';
-        let equityChartInstance = null;
+    const STORAGE_KEY = 'mypnl_trades_v1';
+let trades = [];
+let currentYear = 2025;
+let currentMonth = 6;
+let calendarMode = 'monthly';
 
-        const MONTH_NAMES = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ];
+let equityChartInstance = null;
+let statsMonthlyChartInstance = null;
 
-        const WEEK_ORDINALS = ["First Week", "Second Week", "Third Week", "Fourth Week", "Fifth Week", "Sixth Week"];
+const MONTH_NAMES = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+
+const WEEK_ORDINALS = [
+    "First Week", "Second Week", "Third Week",
+    "Fourth Week", "Fifth Week", "Sixth Week"
+];
 
         // Genera i dati dimostrativi identici allo screenshot per Luglio 2025 (59 trade, $8132.11, 81% win rate)
         function getDefaultJuly2025Trades() {
@@ -1087,10 +1159,115 @@
                 }
             });
         }
+                function renderStats() {
+    const filtered = getFilteredTrades();
+
+    const wins = filtered.filter(t => t.pnl > 0);
+    const losses = filtered.filter(t => t.pnl < 0);
+
+    const totalPnL = filtered.reduce((s, t) => s + t.pnl, 0);
+    const grossWin = wins.reduce((s, t) => s + t.pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
+
+    const averageWin = wins.length ? grossWin / wins.length : 0;
+    const averageLoss = losses.length ? grossLoss / losses.length : 0;
+
+    const winRate = filtered.length
+        ? (wins.length / filtered.length) * 100
+        : 0;
+
+    const profitFactor = grossLoss > 0
+        ? (grossWin / grossLoss).toFixed(2)
+        : (grossWin > 0 ? '∞' : '0.00');
+
+    const expectancy = filtered.length ? totalPnL / filtered.length : 0;
+
+    const bestTrade = filtered.length
+        ? Math.max(...filtered.map(t => t.pnl))
+        : 0;
+
+    const worstTrade = filtered.length
+        ? Math.min(...filtered.map(t => t.pnl))
+        : 0;
+
+    const setText = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    };
+
+    setText('stats-total-trades', filtered.length);
+    setText('stats-winrate', `${winRate.toFixed(1)}%`);
+    setText('stats-average-win', formatCurrency(averageWin));
+    setText('stats-average-loss', formatCurrency(-averageLoss));
+    setText('stats-profit-factor', profitFactor);
+    setText('stats-expectancy', formatCurrency(expectancy, true));
+    setText('stats-best-trade', formatCurrency(bestTrade));
+    setText('stats-worst-trade', formatCurrency(worstTrade));
+
+    const longPnL = filtered
+        .filter(t => t.direction === 'LONG')
+        .reduce((s, t) => s + t.pnl, 0);
+
+    const shortPnL = filtered
+        .filter(t => t.direction === 'SHORT')
+        .reduce((s, t) => s + t.pnl, 0);
+
+    setText('stats-long-pnl', formatCurrency(longPnL));
+    setText('stats-short-pnl', formatCurrency(shortPnL));
+
+    // Monthly performance
+    const monthlyResults = {};
+
+    filtered.forEach(t => {
+        const month = t.date.slice(0, 7);
+        monthlyResults[month] = (monthlyResults[month] || 0) + t.pnl;
+    });
+
+    const months = Object.keys(monthlyResults).sort();
+
+    const ctx = document.getElementById('statsMonthlyChart');
+    if (!ctx) return;
+
+    if (statsMonthlyChartInstance) {
+        statsMonthlyChartInstance.destroy();
+    }
+
+    statsMonthlyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Monthly Net PnL',
+                data: months.map(m => Number(monthlyResults[m].toFixed(2))),
+                backgroundColor: months.map(m =>
+                    monthlyResults[m] >= 0 ? '#34d399' : '#f87171'
+                ),
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#1e2436' },
+                    ticks: { color: '#94a3b8' }
+                },
+                y: {
+                    grid: { color: '#1e2436' },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+}
 
         // Navigazione tra viste sidebar
         function switchView(viewName) {
-            const views = ['calendar', 'dashboard', 'journal', 'generic'];
+            const views = ['calendar', 'dashboard', 'stats', 'journal', 'generic'];
             views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
 
             document.querySelectorAll('.nav-item').forEach(btn => {
@@ -1120,17 +1297,24 @@
             document.getElementById('header-title').textContent = titleText;
             document.getElementById('header-icon').setAttribute('data-lucide', iconName);
 
-            if (viewName === 'calendar') {
-                document.getElementById('view-calendar').classList.remove('hidden');
-            } else if (viewName === 'dashboard' || viewName === 'stats') {
-                document.getElementById('view-dashboard').classList.remove('hidden');
-                renderDashboard();
-            } else if (viewName === 'journal') {
-                document.getElementById('view-journal').classList.remove('hidden');
-            } else {
-                document.getElementById('generic-view-title').textContent = titleText;
-                document.getElementById('view-generic').classList.remove('hidden');
-            }
+           if (viewName === 'calendar') {
+    document.getElementById('view-calendar').classList.remove('hidden');
+
+} else if (viewName === 'dashboard') {
+    document.getElementById('view-dashboard').classList.remove('hidden');
+    renderDashboard();
+
+} else if (viewName === 'stats') {
+    document.getElementById('view-stats').classList.remove('hidden');
+    renderStats();
+
+} else if (viewName === 'journal') {
+    document.getElementById('view-journal').classList.remove('hidden');
+
+} else {
+    document.getElementById('generic-view-title').textContent = titleText;
+    document.getElementById('view-generic').classList.remove('hidden');
+}
 
             // Chiude sidebar mobile dopo selezione
             if (window.innerWidth < 1024) {
