@@ -637,7 +637,12 @@
                 <canvas id="insightsSymbolChart"></canvas>
             </div>
         </div>
-
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+            <h3 class="text-sm font-bold text-white mb-4">Win Rate per simbolo</h3>
+            <div class="h-64">
+                <canvas id="insightsSymbolWinRateChart"></canvas>
+            </div>
+        </div>
         <div class="bg-navy-800 border border-navy-600 rounded-xl p-5 sm:col-span-2">
             <h3 class="text-sm font-bold text-white mb-4">LONG vs SHORT</h3>
             <div class="h-64">
@@ -1418,8 +1423,8 @@ function renderInsights() {
     const weekdayCounts = Array(7).fill(0);
 
     // 2. Performance per simbolo
-    const symbolResults = {};
-
+   const symbolResults = {};
+const symbolWinRateResults = {};
     // 3. Performance LONG vs SHORT
     const directionResults = {
         LONG: 0,
@@ -1448,7 +1453,18 @@ function renderInsights() {
         }
 
         symbolResults[symbol] += pnl;
+if (!symbolWinRateResults[symbol]) {
+    symbolWinRateResults[symbol] = {
+        total: 0,
+        wins: 0
+    };
+}
 
+symbolWinRateResults[symbol].total++;
+
+if (pnl > 0) {
+    symbolWinRateResults[symbol].wins++;
+}
         // Direzione
         if (t.direction === 'LONG' || t.direction === 'SHORT') {
             directionResults[t.direction] += pnl;
@@ -1550,7 +1566,45 @@ function renderInsights() {
             options: chartOptions
         });
     }
+// Grafico Win Rate per simbolo
+const symbolWinRateCtx = document.getElementById('insightsSymbolWinRateChart');
 
+if (symbolWinRateCtx) {
+    const winRateSymbols = Object.keys(symbolWinRateResults);
+
+    const winRates = winRateSymbols.map(symbol => {
+        const result = symbolWinRateResults[symbol];
+        return Number(((result.wins / result.total) * 100).toFixed(1));
+    });
+
+    new Chart(symbolWinRateCtx, {
+        type: 'bar',
+        data: {
+            labels: winRateSymbols,
+            datasets: [{
+                label: 'Win Rate',
+                data: winRates,
+                backgroundColor: '#60a5fa',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                ...chartOptions.scales,
+                y: {
+                    ...chartOptions.scales.y,
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        }
+    });
+}
     // Grafico LONG vs SHORT
     const directionCtx = document.getElementById('insightsDirectionChart');
 
