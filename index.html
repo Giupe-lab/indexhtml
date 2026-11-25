@@ -239,10 +239,10 @@
                     <i data-lucide="settings" class="w-4 h-4"></i>
                     <span>Settings</span>
                 </button>
-                <button onclick="showToast('Sessione salvata in locale')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-750 transition">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                    <span>Sign Out</span>
-                </button>
+                <button onclick="signOutUser()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-750 transition">
+    <i data-lucide="log-out" class="w-4 h-4"></i>
+    <span>Sign Out</span>
+</button>
             </div>
         </aside>
 
@@ -2338,7 +2338,17 @@ function renderBacktesting() {
             }, 2800);
         }
 
-        
+   async function signOutUser() {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+        showToast('Errore durante la disconnessione');
+        console.error(error);
+        return;
+    }
+
+    window.location.reload();
+}     
 // AUTENTICAZIONE MY PNL
 window.addEventListener('DOMContentLoaded', async () => {
 
