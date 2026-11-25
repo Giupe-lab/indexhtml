@@ -1074,21 +1074,24 @@ const WEEK_ORDINALS = [
         }
 
         // Filtra i trade in base ad Account e Filtro Direzione/Esito
-        function getFilteredTrades() {
-            const selectedAccount = document.getElementById('account-select').value;
-            const dirFilter = document.getElementById('direction-filter').value;
+       function getFilteredTrades() {
+    const accountSelect = document.getElementById('account-select');
+    const directionSelect = document.getElementById('direction-filter');
 
-            return trades.filter(t => {
-                const matchAcc = t.account === selectedAccount;
-                if (!matchAcc) return false;
-                if (dirFilter === 'LONG') return t.direction === 'LONG';
-                if (dirFilter === 'SHORT') return t.direction === 'SHORT';
-                if (dirFilter === 'WIN') return t.pnl > 0;
-                if (dirFilter === 'LOSS') return t.pnl < 0;
-                return true;
-            });
-        }
+    const selectedAccount = accountSelect ? accountSelect.value : null;
+    const dirFilter = directionSelect ? directionSelect.value : 'ALL';
 
+    return trades.filter(t => {
+        if (selectedAccount && t.account !== selectedAccount) return false;
+
+        if (dirFilter === 'LONG') return t.direction === 'LONG';
+        if (dirFilter === 'SHORT') return t.direction === 'SHORT';
+        if (dirFilter === 'WIN') return t.pnl > 0;
+        if (dirFilter === 'LOSS') return t.pnl < 0;
+
+        return true;
+    });
+}
         // Restituisce dimensione account selezionato
         function getAccountSize() {
             const sel = document.getElementById('account-select');
@@ -1111,19 +1114,33 @@ const WEEK_ORDINALS = [
             lucide.createIcons();
         }
 
-        function updateAccountHeaderBadge() {
-            const sel = document.getElementById('account-select');
-            const opt = sel.options[sel.selectedIndex];
-            const base = parseFloat(opt.getAttribute('data-base')) || 260000;
-            const accountTrades = trades.filter(t => t.account === sel.value);
-            const totalPnL = accountTrades.reduce((acc, t) => acc + t.pnl, 0);
-            // Per Luglio 2025 demo manteniamo $+260.0k di base + eventuali delta aggiunti dall'utente
-            const demoBaseline = 0;
-            const currentBal = (base + (totalPnL - demoBaseline)) / 1000;
-            const formatted = `$+${currentBal.toFixed(1)}k`;
-            document.getElementById('account-balance-badge').textContent = formatted;
-            document.getElementById('account-active-badge').textContent = formatted;
+      function updateAccountHeaderBadge() {
+    const sel = document.getElementById('account-select');
+    const balanceBadge = document.getElementById('account-balance-badge');
+    const activeBadge = document.getElementById('account-active-badge');
+
+    if (!balanceBadge && !activeBadge) return;
+
+    let totalPnL = 0;
+    let base = 0;
+
+    if (sel) {
+        const opt = sel.options[sel.selectedIndex];
+
+        if (opt) {
+            base = parseFloat(opt.getAttribute('data-base')) || 0;
+            totalPnL = trades
+                .filter(t => t.account === sel.value)
+                .reduce((acc, t) => acc + Number(t.pnl || 0), 0);
         }
+    }
+
+    const currentBal = base + totalPnL;
+    const formatted = `$${currentBal.toFixed(2)}`;
+
+    if (balanceBadge) balanceBadge.textContent = formatted;
+    if (activeBadge) activeBadge.textContent = formatted;
+}
 
         function renderCalendarAndKPIs() {
             const filtered = getFilteredTrades();
