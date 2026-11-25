@@ -1266,7 +1266,7 @@ const WEEK_ORDINALS = [
 }
 
         // Navigazione tra viste sidebar
-        function switchView(viewName) {
+        window.switchView = function(viewName) {
             const views = ['calendar', 'dashboard', 'stats', 'journal', 'generic'];
             views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
 
@@ -1473,7 +1473,7 @@ const WEEK_ORDINALS = [
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             lucide.createIcons();
-        }
+        };
 
         function closeDayModal() {
             const modal = document.getElementById('day-modal');
