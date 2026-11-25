@@ -630,7 +630,12 @@
                 <canvas id="insightsWeekdayChart"></canvas>
             </div>
         </div>
-
+        <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+            <h3 class="text-sm font-bold text-white mb-4">Win Rate per giorno</h3>
+            <div class="h-64">
+                <canvas id="insightsWeekdayWinRateChart"></canvas>
+            </div>
+        </div>
         <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
             <h3 class="text-sm font-bold text-white mb-4">Performance per simbolo</h3>
             <div class="h-64">
@@ -1523,7 +1528,44 @@ if (pnl > 0) {
             }
         }
     };
+// Grafico Win Rate per giorno
+const weekdayWinRateCtx = document.getElementById('insightsWeekdayWinRateChart');
 
+if (weekdayWinRateCtx) {
+    const weekdayWinRates = weekdayNames.map((day, index) => {
+        return weekdayCounts[index] > 0
+            ? Number(((weekdayWins[index] / weekdayCounts[index]) * 100).toFixed(1))
+            : 0;
+    });
+
+    new Chart(weekdayWinRateCtx, {
+        type: 'bar',
+        data: {
+            labels: weekdayNames,
+            datasets: [{
+                label: 'Win Rate',
+                data: weekdayWinRates,
+                backgroundColor: '#a78bfa',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: {
+                ...chartOptions.scales,
+                y: {
+                    ...chartOptions.scales.y,
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        }
+    });
+}
     // Grafico giorni della settimana
     const weekdayCtx = document.getElementById('insightsWeekdayChart');
 
