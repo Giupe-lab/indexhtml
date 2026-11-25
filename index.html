@@ -1421,7 +1421,7 @@ function renderInsights() {
     // 1. Performance per giorno
     const weekdayPnL = Array(7).fill(0);
     const weekdayCounts = Array(7).fill(0);
-
+const weekdayWins = Array(7).fill(0);
     // 2. Performance per simbolo
    const symbolResults = {};
 const symbolWinRateResults = {};
@@ -1444,7 +1444,9 @@ const symbolWinRateResults = {};
 
         weekdayPnL[weekday] += pnl;
         weekdayCounts[weekday]++;
-
+if (pnl > 0) {
+    weekdayWins[weekday]++;
+}
         // Simboli
         const symbol = (t.symbol || 'NQ').toUpperCase();
 
