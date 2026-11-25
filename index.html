@@ -2204,7 +2204,7 @@ function renderBacktesting() {
 } else if (viewName === 'backtesting') {
     document.getElementById('view-backtesting').classList.remove('hidden');
     renderBacktesting();
-}
+
 } else if (viewName === 'journal') {
     document.getElementById('view-journal').classList.remove('hidden');
 
@@ -2220,7 +2220,7 @@ function renderBacktesting() {
             }
 
             lucide.createIcons();
-        }
+        };
 
         function setCalendarMode(mode) {
             calendarMode = mode;
