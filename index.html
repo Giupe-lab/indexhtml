@@ -1063,18 +1063,10 @@ const WEEK_ORDINALS = [
         }
 
         // Inizializzazione dati da LocalStorage
-        function loadTrades() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try {
-                    trades = JSON.parse(saved);
-                } catch (e) {
-                    trades = getDefaultJuly2025Trades();
-                }
-            } else {
-                trades = getDefaultJuly2025Trades();
-                saveTrades();
-            }
+       function loadTrades() {
+    trades = [];
+    saveTrades();
+}
         }
 
         function saveTrades() {
@@ -1126,7 +1118,7 @@ const WEEK_ORDINALS = [
             const accountTrades = trades.filter(t => t.account === sel.value);
             const totalPnL = accountTrades.reduce((acc, t) => acc + t.pnl, 0);
             // Per Luglio 2025 demo manteniamo $+260.0k di base + eventuali delta aggiunti dall'utente
-            const demoBaseline = sel.value === '200K challenge' ? 8132.11 : 0;
+            const demoBaseline = 0;
             const currentBal = (base + (totalPnL - demoBaseline)) / 1000;
             const formatted = `$+${currentBal.toFixed(1)}k`;
             document.getElementById('account-balance-badge').textContent = formatted;
