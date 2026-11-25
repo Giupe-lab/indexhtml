@@ -1405,6 +1405,210 @@ const WEEK_ORDINALS = [
     });
 }
 
+function renderInsights() {
+    const filtered = getFilteredTrades();
+
+    const weekdayNames = [
+        'Domenica', 'Lunedì', 'Martedì', 'Mercoledì',
+        'Giovedì', 'Venerdì', 'Sabato'
+    ];
+
+    // 1. Performance per giorno
+    const weekdayPnL = Array(7).fill(0);
+    const weekdayCounts = Array(7).fill(0);
+
+    // 2. Performance per simbolo
+    const symbolResults = {};
+
+    // 3. Performance LONG vs SHORT
+    const directionResults = {
+        LONG: 0,
+        SHORT: 0
+    };
+
+    // 4. Analisi delle note
+    const notesResults = {};
+
+    filtered.forEach(t => {
+        const pnl = Number(t.pnl) || 0;
+
+        // Giorni della settimana
+        const parts = t.date.split('-').map(Number);
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
+        const weekday = date.getDay();
+
+        weekdayPnL[weekday] += pnl;
+        weekdayCounts[weekday]++;
+
+        // Simboli
+        const symbol = (t.symbol || 'NQ').toUpperCase();
+
+        if (!symbolResults[symbol]) {
+            symbolResults[symbol] = 0;
+        }
+
+        symbolResults[symbol] += pnl;
+
+        // Direzione
+        if (t.direction === 'LONG' || t.direction === 'SHORT') {
+            directionResults[t.direction] += pnl;
+        }
+
+        // Note ricorrenti
+        const note = (t.notes || '').trim();
+
+        if (note) {
+            const key = note.toLowerCase();
+
+            if (!notesResults[key]) {
+                notesResults[key] = {
+                    text: note,
+                    count: 0,
+                    pnl: 0
+                };
+            }
+
+            notesResults[key].count++;
+            notesResults[key].pnl += pnl;
+        }
+    });
+
+    // Distrugge i grafici precedenti
+    [
+        'insightsWeekdayChartInstance',
+        'insightsSymbolChartInstance',
+        'insightsDirectionChartInstance'
+    ].forEach(key => {
+        if (window[key]) {
+            window[key].destroy();
+            window[key] = null;
+        }
+    });
+
+    // Configurazione comune
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: '#1e2436' },
+                ticks: { color: '#94a3b8' }
+            },
+            y: {
+                grid: { color: '#1e2436' },
+                ticks: { color: '#94a3b8' }
+            }
+        }
+    };
+
+    // Grafico giorni della settimana
+    const weekdayCtx = document.getElementById('insightsWeekdayChart');
+
+    if (weekdayCtx) {
+        window.insightsWeekdayChartInstance = new Chart(weekdayCtx, {
+            type: 'bar',
+            data: {
+                labels: weekdayNames,
+                datasets: [{
+                    data: weekdayPnL.map(v => Number(v.toFixed(2))),
+                    backgroundColor: weekdayPnL.map(v =>
+                        v >= 0 ? '#34d399' : '#f87171'
+                    ),
+                    borderRadius: 5
+                }]
+            },
+            options: chartOptions
+        });
+    }
+
+    // Grafico simboli
+    const symbols = Object.keys(symbolResults)
+        .sort((a, b) => symbolResults[b] - symbolResults[a]);
+
+    const symbolCtx = document.getElementById('insightsSymbolChart');
+
+    if (symbolCtx) {
+        window.insightsSymbolChartInstance = new Chart(symbolCtx, {
+            type: 'bar',
+            data: {
+                labels: symbols,
+                datasets: [{
+                    data: symbols.map(s =>
+                        Number(symbolResults[s].toFixed(2))
+                    ),
+                    backgroundColor: symbols.map(s =>
+                        symbolResults[s] >= 0 ? '#34d399' : '#f87171'
+                    ),
+                    borderRadius: 5
+                }]
+            },
+            options: chartOptions
+        });
+    }
+
+    // Grafico LONG vs SHORT
+    const directionCtx = document.getElementById('insightsDirectionChart');
+
+    if (directionCtx) {
+        window.insightsDirectionChartInstance = new Chart(directionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['LONG', 'SHORT'],
+                datasets: [{
+                    data: [
+                        Number(directionResults.LONG.toFixed(2)),
+                        Number(directionResults.SHORT.toFixed(2))
+                    ],
+                    backgroundColor: ['#34d399', '#60a5fa'],
+                    borderRadius: 6
+                }]
+            },
+            options: chartOptions
+        });
+    }
+
+    // Analisi delle note
+    const notesContainer = document.getElementById('insights-notes');
+
+    if (notesContainer) {
+        notesContainer.innerHTML = '';
+
+        const notes = Object.values(notesResults)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
+        if (notes.length === 0) {
+            notesContainer.textContent =
+                'Non ci sono ancora note sufficienti da analizzare.';
+        } else {
+            notes.forEach(item => {
+                const row = document.createElement('div');
+                row.className =
+                    'flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-navy-600 py-3';
+
+                const description = document.createElement('div');
+                description.className = 'text-slate-300 text-xs';
+                description.textContent =
+                    `${item.text} (${item.count} operazioni)`;
+
+                const result = document.createElement('div');
+                result.className =
+                    `font-bold text-sm ${item.pnl >= 0 ? 'text-profit-text' : 'text-loss-text'}`;
+                result.textContent = formatCurrency(item.pnl);
+
+                row.appendChild(description);
+                row.appendChild(result);
+                notesContainer.appendChild(row);
+            });
+        }
+    }
+}
+
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
             const views = ['calendar', 'dashboard', 'stats', 'insights', 'journal', 'generic'];
