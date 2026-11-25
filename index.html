@@ -1933,7 +1933,10 @@ function renderBacktesting() {
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
             const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic'];
-            views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            views.forEach(v => {
+    const element = document.getElementById(`view-${v}`);
+    if (element) element.classList.add('hidden');
+});
 
             document.querySelectorAll('.nav-item').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-600/25');
