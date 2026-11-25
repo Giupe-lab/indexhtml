@@ -667,31 +667,228 @@
 </div>
 
 <!-- BACKTESTING PAGE -->
-<div id="view-backtesting" class="hidden space-y-5 fade-in">
 
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-        <h2 class="text-lg font-bold text-white mb-1">Backtesting</h2>
-        <p class="text-xs text-slate-400">
-            Testa le tue strategie sui dati storici e analizza le loro performance.
-        </p>
-    </div>
+// =====================================
+// BACKTESTING - DATI SEPARATI
+// =====================================
 
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-8 text-center">
-        <div class="w-12 h-12 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="chart-no-axes-combined" class="w-6 h-6"></i>
-        </div>
+let backtestChartInstance = null;
 
-        <h3 class="text-lg font-bold text-white mb-2">
-            Le tue strategie
-        </h3>
+function getBacktestData() {
+    try {
+        return JSON.parse(localStorage.getItem('mypnl_backtest_v1')) || {
+            strategies: [],
+            trades: []
+        };
+    } catch (error) {
+        return { strategies: [], trades: [] };
+    }
+}
 
-        <p class="text-sm text-slate-400">
-            Qui potrai creare strategie, registrare operazioni storiche
-            e analizzare automaticamente i risultati.
-        </p>
-    </div>
+function saveBacktestData(data) {
+    localStorage.setItem('mypnl_backtest_v1', JSON.stringify(data));
+}
 
-</div>
+function handleCreateBacktestStrategy(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('bt-strategy-name').value.trim();
+    const symbol = document.getElementById('bt-strategy-symbol').value;
+    const timeframe = document.getElementById('bt-strategy-timeframe').value.trim();
+    const pointValue = Number(document.getElementById('bt-point-value').value);
+
+    if (!name || !Number.isFinite(pointValue) || pointValue <= 0) {
+        alert('Inserisci un nome e un valore per punto valido.');
+        return;
+    }
+
+    const data = getBacktestData();
+
+    const strategy = {
+        id: String(Date.now()),
+        name,
+        symbol,
+        timeframe,
+        pointValue
+    };
+
+    data.strategies.push(strategy);
+    saveBacktestData(data);
+
+    document.getElementById('bt-strategy-name').value = '';
+    document.getElementById('bt-strategy-timeframe').value = '';
+
+    renderBacktesting();
+    document.getElementById('bt-selected-strategy').value = strategy.id;
+    renderBacktesting();
+}
+
+function handleSaveBacktestTrade(e) {
+    e.preventDefault();
+
+    const data = getBacktestData();
+    const strategyId = document.getElementById('bt-selected-strategy').value;
+    const strategy = data.strategies.find(s => s.id === strategyId);
+
+    if (!strategy) {
+        alert('Prima crea e seleziona una strategia.');
+        return;
+    }
+
+    const date = document.getElementById('bt-date').value;
+    const direction = document.getElementById('bt-direction').value;
+    const entry = Number(document.getElementById('bt-entry').value);
+    const exit = Number(document.getElementById('bt-exit').value);
+    const quantity = Number(document.getElementById('bt-quantity').value);
+    const commission = Number(document.getElementById('bt-commission').value) || 0;
+
+    if (!date || !Number.isFinite(entry) || !Number.isFinite(exit) ||
+        entry <= 0 || exit <= 0 || !Number.isInteger(quantity) ||
+        quantity < 1 || commission < 0) {
+        alert('Controlla i dati inseriti.');
+        return;
+    }
+
+    const points = direction === 'LONG' ? exit - entry : entry - exit;
+    const pnl = points * quantity * strategy.pointValue - commission;
+
+    data.trades.push({
+        id: String(Date.now()),
+        strategyId,
+        date,
+        direction,
+        entry,
+        exit,
+        quantity,
+        commission,
+        pnl: Number(pnl.toFixed(2)),
+        notes: document.getElementById('bt-notes').value.trim()
+    });
+
+    saveBacktestData(data);
+
+    document.getElementById('bt-entry').value = '';
+    document.getElementById('bt-exit').value = '';
+    document.getElementById('bt-quantity').value = '1';
+    document.getElementById('bt-commission').value = '0';
+    document.getElementById('bt-notes').value = '';
+
+    renderBacktesting();
+}
+
+function renderBacktesting() {
+    const data = getBacktestData();
+    const selector = document.getElementById('bt-selected-strategy');
+
+    if (!selector) return;
+
+    const previousSelection = selector.value;
+
+    selector.innerHTML = '<option value="">Seleziona una strategia</option>';
+
+    data.strategies.forEach(strategy => {
+        const option = document.createElement('option');
+        option.value = strategy.id;
+        option.textContent = `${strategy.name} (${strategy.symbol})`;
+        selector.appendChild(option);
+    });
+
+    if (data.strategies.some(s => s.id === previousSelection)) {
+        selector.value = previousSelection;
+    } else if (data.strategies.length > 0) {
+        selector.value = data.strategies[data.strategies.length - 1].id;
+    }
+
+    const selectedId = selector.value;
+    const trades = data.trades
+        .filter(t => t.strategyId === selectedId)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    const total = trades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = trades.filter(t => t.pnl > 0);
+    const losses = trades.filter(t => t.pnl < 0);
+    const grossWin = wins.reduce((sum, t) => sum + t.pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
+    const winRate = trades.length ? wins.length / trades.length * 100 : 0;
+    const profitFactor = grossLoss > 0
+        ? (grossWin / grossLoss).toFixed(2)
+        : grossWin > 0 ? '∞' : '—';
+
+    document.getElementById('bt-net-pnl').textContent =
+        formatCurrency(total);
+    document.getElementById('bt-win-rate').textContent =
+        `${winRate.toFixed(1)}%`;
+    document.getElementById('bt-profit-factor').textContent = profitFactor;
+    document.getElementById('bt-total-trades').textContent = trades.length;
+
+    const table = document.getElementById('bt-trades-list');
+
+    if (trades.length === 0) {
+        table.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Nessuna operazione per questa strategia.</td></tr>';
+    } else {
+        table.innerHTML = trades.map(t => `
+            <tr class="border-b border-navy-600">
+                <td class="p-3">${t.date}</td>
+                <td class="p-3">${t.direction}</td>
+                <td class="p-3">${t.entry}</td>
+                <td class="p-3">${t.exit}</td>
+                <td class="p-3">${t.quantity}</td>
+                <td class="p-3 font-bold ${t.pnl >= 0 ? 'text-profit-text' : 'text-loss-text'}">${formatCurrency(t.pnl)}</td>
+            </tr>
+        `).join('');
+    }
+
+    const canvas = document.getElementById('bt-equity-chart');
+
+    if (backtestChartInstance) {
+        backtestChartInstance.destroy();
+        backtestChartInstance = null;
+    }
+
+    if (canvas && selectedId && trades.length > 0) {
+        let running = 0;
+        const labels = [];
+        const values = [];
+
+        trades.forEach((trade, index) => {
+            running += trade.pnl;
+            labels.push(`${trade.date} (#${index + 1})`);
+            values.push(Number(running.toFixed(2)));
+        });
+
+        backtestChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Equity',
+                    data: values,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    fill: true,
+                    tension: 0.25
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#1e2436' }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#1e2436' }
+                    }
+                }
+            }
+        });
+    }
+}
 
                 <!-- ========================================================= -->
                 <!-- VISTA 3: TRADE JOURNAL (ELENCO COMPLETO OPERAZIONI)       -->
@@ -1734,6 +1931,228 @@ if (symbolWinRateCtx) {
     }
 }
 
+// =====================================
+// BACKTESTING - DATI SEPARATI
+// =====================================
+
+let backtestChartInstance = null;
+
+function getBacktestData() {
+    try {
+        return JSON.parse(localStorage.getItem('mypnl_backtest_v1')) || {
+            strategies: [],
+            trades: []
+        };
+    } catch (error) {
+        return { strategies: [], trades: [] };
+    }
+}
+
+function saveBacktestData(data) {
+    localStorage.setItem('mypnl_backtest_v1', JSON.stringify(data));
+}
+
+function handleCreateBacktestStrategy(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('bt-strategy-name').value.trim();
+    const symbol = document.getElementById('bt-strategy-symbol').value;
+    const timeframe = document.getElementById('bt-strategy-timeframe').value.trim();
+    const pointValue = Number(document.getElementById('bt-point-value').value);
+
+    if (!name || !Number.isFinite(pointValue) || pointValue <= 0) {
+        alert('Inserisci un nome e un valore per punto valido.');
+        return;
+    }
+
+    const data = getBacktestData();
+
+    const strategy = {
+        id: String(Date.now()),
+        name,
+        symbol,
+        timeframe,
+        pointValue
+    };
+
+    data.strategies.push(strategy);
+    saveBacktestData(data);
+
+    document.getElementById('bt-strategy-name').value = '';
+    document.getElementById('bt-strategy-timeframe').value = '';
+
+    renderBacktesting();
+    document.getElementById('bt-selected-strategy').value = strategy.id;
+    renderBacktesting();
+}
+
+function handleSaveBacktestTrade(e) {
+    e.preventDefault();
+
+    const data = getBacktestData();
+    const strategyId = document.getElementById('bt-selected-strategy').value;
+    const strategy = data.strategies.find(s => s.id === strategyId);
+
+    if (!strategy) {
+        alert('Prima crea e seleziona una strategia.');
+        return;
+    }
+
+    const date = document.getElementById('bt-date').value;
+    const direction = document.getElementById('bt-direction').value;
+    const entry = Number(document.getElementById('bt-entry').value);
+    const exit = Number(document.getElementById('bt-exit').value);
+    const quantity = Number(document.getElementById('bt-quantity').value);
+    const commission = Number(document.getElementById('bt-commission').value) || 0;
+
+    if (!date || !Number.isFinite(entry) || !Number.isFinite(exit) ||
+        entry <= 0 || exit <= 0 || !Number.isInteger(quantity) ||
+        quantity < 1 || commission < 0) {
+        alert('Controlla i dati inseriti.');
+        return;
+    }
+
+    const points = direction === 'LONG' ? exit - entry : entry - exit;
+    const pnl = points * quantity * strategy.pointValue - commission;
+
+    data.trades.push({
+        id: String(Date.now()),
+        strategyId,
+        date,
+        direction,
+        entry,
+        exit,
+        quantity,
+        commission,
+        pnl: Number(pnl.toFixed(2)),
+        notes: document.getElementById('bt-notes').value.trim()
+    });
+
+    saveBacktestData(data);
+
+    document.getElementById('bt-entry').value = '';
+    document.getElementById('bt-exit').value = '';
+    document.getElementById('bt-quantity').value = '1';
+    document.getElementById('bt-commission').value = '0';
+    document.getElementById('bt-notes').value = '';
+
+    renderBacktesting();
+}
+
+function renderBacktesting() {
+    const data = getBacktestData();
+    const selector = document.getElementById('bt-selected-strategy');
+
+    if (!selector) return;
+
+    const previousSelection = selector.value;
+
+    selector.innerHTML = '<option value="">Seleziona una strategia</option>';
+
+    data.strategies.forEach(strategy => {
+        const option = document.createElement('option');
+        option.value = strategy.id;
+        option.textContent = `${strategy.name} (${strategy.symbol})`;
+        selector.appendChild(option);
+    });
+
+    if (data.strategies.some(s => s.id === previousSelection)) {
+        selector.value = previousSelection;
+    } else if (data.strategies.length > 0) {
+        selector.value = data.strategies[data.strategies.length - 1].id;
+    }
+
+    const selectedId = selector.value;
+    const trades = data.trades
+        .filter(t => t.strategyId === selectedId)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    const total = trades.reduce((sum, t) => sum + t.pnl, 0);
+    const wins = trades.filter(t => t.pnl > 0);
+    const losses = trades.filter(t => t.pnl < 0);
+    const grossWin = wins.reduce((sum, t) => sum + t.pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
+    const winRate = trades.length ? wins.length / trades.length * 100 : 0;
+    const profitFactor = grossLoss > 0
+        ? (grossWin / grossLoss).toFixed(2)
+        : grossWin > 0 ? '∞' : '—';
+
+    document.getElementById('bt-net-pnl').textContent =
+        formatCurrency(total);
+    document.getElementById('bt-win-rate').textContent =
+        `${winRate.toFixed(1)}%`;
+    document.getElementById('bt-profit-factor').textContent = profitFactor;
+    document.getElementById('bt-total-trades').textContent = trades.length;
+
+    const table = document.getElementById('bt-trades-list');
+
+    if (trades.length === 0) {
+        table.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Nessuna operazione per questa strategia.</td></tr>';
+    } else {
+        table.innerHTML = trades.map(t => `
+            <tr class="border-b border-navy-600">
+                <td class="p-3">${t.date}</td>
+                <td class="p-3">${t.direction}</td>
+                <td class="p-3">${t.entry}</td>
+                <td class="p-3">${t.exit}</td>
+                <td class="p-3">${t.quantity}</td>
+                <td class="p-3 font-bold ${t.pnl >= 0 ? 'text-profit-text' : 'text-loss-text'}">${formatCurrency(t.pnl)}</td>
+            </tr>
+        `).join('');
+    }
+
+    const canvas = document.getElementById('bt-equity-chart');
+
+    if (backtestChartInstance) {
+        backtestChartInstance.destroy();
+        backtestChartInstance = null;
+    }
+
+    if (canvas && selectedId && trades.length > 0) {
+        let running = 0;
+        const labels = [];
+        const values = [];
+
+        trades.forEach((trade, index) => {
+            running += trade.pnl;
+            labels.push(`${trade.date} (#${index + 1})`);
+            values.push(Number(running.toFixed(2)));
+        });
+
+        backtestChartInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Equity',
+                    data: values,
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96,165,250,0.12)',
+                    fill: true,
+                    tension: 0.25
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#1e2436' }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#1e2436' }
+                    }
+                }
+            }
+        });
+    }
+}
+
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
             const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic'];
@@ -1783,6 +2202,8 @@ if (symbolWinRateCtx) {
 
 } else if (viewName === 'backtesting') {
     document.getElementById('view-backtesting').classList.remove('hidden');
+    renderBacktesting();
+}
 } else if (viewName === 'journal') {
     document.getElementById('view-journal').classList.remove('hidden');
 
