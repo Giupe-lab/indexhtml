@@ -1184,6 +1184,82 @@ async function saveEncryptedArchive() {
 
     console.log('Archivio cifrato sincronizzato.');
 }
+        async function initializeEncryptedCloud() {
+    const { data, error } = await supabaseClient
+        .from('private_trades')
+        .select('encrypted_data')
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+    if (error) throw error;
+
+    // Primo accesso: crea l'archivio cifrato
+    if (!data) {
+        currentEncryptionKey = await MYPNL_CRYPTO.generateKey();
+        currentRecoveryCode = generateRecoveryCode();
+
+        alert(
+            'CODICE DI RECUPERO MY PNL\n\n' +
+            currentRecoveryCode +
+            '\n\nCopialo e conservalo in un posto sicuro.'
+        );
+
+        const confirmed = confirm('Hai salvato il codice di recupero?');
+
+        if (!confirmed) {
+            currentEncryptionKey = null;
+            currentRecoveryCode = null;
+            throw new Error('Salva prima il codice di recupero.');
+        }
+
+        await saveEncryptedArchive();
+        return;
+    }
+
+    // Archivio già esistente: recupero con codice
+    let storedArchive;
+
+    try {
+        storedArchive = JSON.parse(data.encrypted_data);
+    } catch {
+        throw new Error('Archivio cloud non valido.');
+    }
+
+    if (!storedArchive.encryptedArchive || !storedArchive.wrappedKey) {
+        throw new Error('Archivio non cifrato. Non è stato modificato.');
+    }
+
+    const recoveryCode = prompt('Inserisci il tuo codice di recupero My PnL:');
+
+    if (!recoveryCode) {
+        throw new Error('Recupero annullato.');
+    }
+
+    currentEncryptionKey = await unwrapEncryptionKey(
+        storedArchive.wrappedKey,
+        recoveryCode.trim()
+    );
+
+    currentRecoveryCode = recoveryCode.trim();
+
+    const archive = await MYPNL_CRYPTO.decrypt(
+        storedArchive.encryptedArchive,
+        currentEncryptionKey
+    );
+
+    trades = Array.isArray(archive.trades) ? archive.trades : [];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+
+    localStorage.setItem(
+        'mypnl_initial_capital_' + currentUserId,
+        archive.initialCapital || '0'
+    );
+
+    if (archive.backtest) {
+        saveBacktestData(archive.backtest);
+    }
+}
         // TEST CONNESSIONE SUPABASE
 supabaseClient.auth.getSession()
     .then(({ data, error }) => {
@@ -1278,15 +1354,30 @@ const WEEK_ORDINALS = [
         }
 
         // Inizializzazione dati da LocalStorage
-       function loadTrades() {
-    trades = [];
-    saveTrades();
+      function loadTrades() {
+    try {
+        const savedTrades = localStorage.getItem(STORAGE_KEY);
+        trades = savedTrades ? JSON.parse(savedTrades) : [];
+
+        if (!Array.isArray(trades)) {
+            trades = [];
+        }
+    } catch (error) {
+        console.error('Errore caricamento trade:', error);
+        trades = [];
+    }
 }
-        
 
         function saveTrades() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
-        }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+
+    if (currentUserId && currentEncryptionKey && currentRecoveryCode) {
+        saveEncryptedArchive().catch(error => {
+            console.error('Errore sincronizzazione cloud:', error);
+            alert('Trade salvato sul dispositivo, ma sincronizzazione cloud non riuscita.');
+        });
+    }
+}
 
         // Filtra i trade in base ad Account e Filtro Direzione/Esito
        function getFilteredTrades() {
@@ -2091,8 +2182,14 @@ function getBacktestData() {
 
 function saveBacktestData(data) {
     localStorage.setItem('mypnl_backtest_v1', JSON.stringify(data));
-}
 
+    if (currentUserId && currentEncryptionKey && currentRecoveryCode) {
+        saveEncryptedArchive().catch(error => {
+            console.error('Errore sincronizzazione backtest:', error);
+            alert('Backtest salvato sul dispositivo, ma sincronizzazione cloud non riuscita.');
+        });
+    }
+}
 function handleCreateBacktestStrategy(e) {
     e.preventDefault();
 
@@ -2569,7 +2666,12 @@ async function saveInitialCapital() {
     const storageKey = 'mypnl_initial_capital_' + data.user.id;
 
    localStorage.setItem(storageKey, amount.toString());
-
+if (currentEncryptionKey && currentRecoveryCode) {
+    saveEncryptedArchive().catch(error => {
+        console.error('Errore sincronizzazione capitale:', error);
+        showToast('Capitale salvato localmente, ma sincronizzazione cloud non riuscita.');
+    });
+}
 closeSettingsModal();
 renderAll();
 showToast('Capitale iniziale salvato!');
@@ -2687,11 +2789,11 @@ let currentRecoveryCode = null;
 
     try {
         loadTrades();
-        renderAll();
+await initializeEncryptedCloud();
+renderAll();
     } catch (error) {
         console.error('Errore apertura My PnL:', error);
-        showAuthError('Errore durante il caricamento del diario.');
-    }
+        showAuthError(error.message || 'Errore durante il caricamento del diario.');
 }
 
     authToggle.addEventListener('click', () => {
@@ -2734,8 +2836,7 @@ let currentRecoveryCode = null;
                 return;
             }
 
-            enterApp();
-
+            await enterApp();
         } catch (error) {
             showAuthError(error.message || 'Si è verificato un errore.');
         } finally {
@@ -2775,10 +2876,10 @@ let currentRecoveryCode = null;
     }
 
     if (data.session) {
-        enterApp();
-    } else {
-        authScreen.classList.remove('hidden');
-    }
+    await enterApp();
+} else {
+    authScreen.classList.remove('hidden');
+}
 });
 
     </script>
