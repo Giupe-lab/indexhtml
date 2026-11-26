@@ -1246,7 +1246,7 @@ async function initializeEncryptedCloud() {
 
         const { data: result, error: saveError } =
             await supabaseClient.functions.invoke(
-                'mypnl-key-recovery',
+                'clever-api',
                 { body: { action: 'save', key: keyBase64 } }
             );
 
@@ -1260,7 +1260,7 @@ async function initializeEncryptedCloud() {
 
     const { data: result, error: keyError } =
         await supabaseClient.functions.invoke(
-            'mypnl-key-recovery',
+            'clever-api',
             { body: { action: 'get' } }
         );
 
