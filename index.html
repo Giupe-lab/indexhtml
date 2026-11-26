@@ -134,23 +134,54 @@
             <button id="auth-submit" type="submit"
                 class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500">
                 Accedi
-            </button>
+               </button>
+</form>
 
-        </form>
+<!-- INCOLLA QUI IL MODULO password-update-form -->
 
-        <div class="mt-6 flex flex-col items-center gap-3 text-sm">
-            <button id="auth-toggle" type="button" class="text-blue-400 hover:text-blue-300">
-                Non hai un account? Registrati
-            </button>
+<form id="password-update-form" class="hidden space-y-4">
+    <p class="text-sm text-slate-300">
+        Scegli la tua nuova password per My PnL.
+    </p>
 
-            <button id="auth-recovery" type="button" class="text-slate-400 hover:text-white">
-                Password dimenticata?
-            </button>
-        </div>
-
+    <div>
+        <label class="mb-2 block text-sm text-slate-300">Nuova password</label>
+        <input id="new-password" type="password" required minlength="8"
+            autocomplete="new-password"
+            class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white"
+            placeholder="Almeno 8 caratteri">
     </div>
+
+    <div>
+        <label class="mb-2 block text-sm text-slate-300">Conferma password</label>
+        <input id="confirm-new-password" type="password" required minlength="8"
+            autocomplete="new-password"
+            class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white"
+            placeholder="Ripeti la password">
+    </div>
+
+    <p id="password-update-error" class="hidden text-sm text-red-400"></p>
+
+    <button type="submit"
+        class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white">
+        Aggiorna password
+    </button>
+</form>
+
+<div id="auth-actions" class="mt-6 flex flex-col items-center gap-3 text-sm">
+
+    <button id="auth-toggle" type="button" class="text-blue-400 hover:text-blue-300">
+        Non hai un account? Registrati
+    </button>
+
+    <button id="auth-recovery" type="button" class="text-slate-400 hover:text-white">
+        Password dimenticata?
+    </button>
+
 </div>
 
+<!-- Layout Principale -->
+<div class="flex min-h-screen w-full">
     <!-- Layout Principale -->
     <div class="flex min-h-screen w-full">
 
@@ -2767,7 +2798,72 @@ function closeSettingsModal() {
     const authToggle = document.getElementById('auth-toggle');
     const authRecovery = document.getElementById('auth-recovery');
     const authError = document.getElementById('auth-error');
+const passwordUpdateForm = document.getElementById('password-update-form');
+const newPasswordInput = document.getElementById('new-password');
+const confirmNewPasswordInput = document.getElementById('confirm-new-password');
+const passwordUpdateError = document.getElementById('password-update-error');
+const authActions = document.getElementById('auth-actions');
 
+function showPasswordRecovery() {
+    authScreen.classList.remove('hidden');
+    authForm.classList.add('hidden');
+    authActions.classList.add('hidden');
+    passwordUpdateForm.classList.remove('hidden');
+}
+
+supabaseClient.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+        showPasswordRecovery();
+    }
+});
+
+passwordUpdateForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    passwordUpdateError.classList.add('hidden');
+
+    const password = newPasswordInput.value;
+    const confirmation = confirmNewPasswordInput.value;
+
+    if (password.length < 8) {
+        passwordUpdateError.textContent = 'La password deve contenere almeno 8 caratteri.';
+        passwordUpdateError.classList.remove('hidden');
+        return;
+    }
+
+    if (password !== confirmation) {
+        passwordUpdateError.textContent = 'Le password non coincidono.';
+        passwordUpdateError.classList.remove('hidden');
+        return;
+    }
+
+    const button = passwordUpdateForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Aggiornamento...';
+
+    try {
+        const { error } = await supabaseClient.auth.updateUser({
+            password: password
+        });
+
+        if (error) throw error;
+
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        passwordUpdateForm.classList.add('hidden');
+        authForm.classList.remove('hidden');
+        authActions.classList.remove('hidden');
+
+        await enterApp();
+
+    } catch (error) {
+        passwordUpdateError.textContent = error.message || 'Errore durante l’aggiornamento.';
+        passwordUpdateError.classList.remove('hidden');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Aggiorna password';
+    }
+});
     let authMode = 'login';
 
     function showAuthError(message) {
@@ -2896,7 +2992,13 @@ renderAll();
         return;
     }
 
-    if (sessionData.session) {
+    const recoveryInUrl =
+    window.location.hash.includes('type=recovery') ||
+    new URLSearchParams(window.location.search).get('type') === 'recovery';
+
+if (recoveryInUrl) {
+    showPasswordRecovery();
+} else if (sessionData.session) {
     await enterApp();
 } else {
     authScreen.classList.remove('hidden');
