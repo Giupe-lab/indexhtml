@@ -1988,6 +1988,7 @@ if (pnl > 0) {
 const weekdayWinRateCtx = document.getElementById('insightsWeekdayWinRateChart');
 
 if (weekdayWinRateCtx) {
+        Chart.getChart(weekdayWinRateCtx)?.destroy();
     const weekdayWinRates = weekdayNames.map((day, index) => {
         return weekdayCounts[index] > 0
             ? Number(((weekdayWins[index] / weekdayCounts[index]) * 100).toFixed(1))
