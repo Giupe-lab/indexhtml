@@ -746,7 +746,8 @@
 
 <!-- BACKTESTING PAGE -->
 <!-- MY PNL - INTERACTIVE BACKTESTER -->
-<section id="mynpl-backtest" aria-label="My PnL Interactive Backtester">
+<div id="view-backtesting" class="hidden space-y-5 fade-in">
+ <section id="mynpl-backtest" aria-label="My PnL Interactive Backtester">
   <style>
     #mynpl-backtest{--mnp-bg:#0b1220;--mnp-card:#111c2e;--mnp-border:#26364d;--mnp-text:#e8eef8;--mnp-muted:#91a2ba;--mnp-blue:#5795ff;--mnp-green:#20c997;--mnp-red:#ff647c;color:var(--mnp-text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
     #mynpl-backtest *{box-sizing:border-box}
@@ -866,7 +867,8 @@
     <p class="mnp-hint">Questa demo salva il diario solo in questo browser (localStorage). Non è ancora collegata a Supabase e non modifica il diario principale di My PnL.</p>
   </div>
 </section>
-
+</div>
+                
 <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 (function(){
