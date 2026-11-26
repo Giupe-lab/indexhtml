@@ -2366,7 +2366,9 @@ if (symbolWinRateCtx) {
         return Number(((result.wins / result.total) * 100).toFixed(1));
     });
 
-    new Chart(symbolWinRateCtx, {
+    Chart.getChart(symbolWinRateCtx)?.destroy();
+
+window.insightsSymbolWinRateChartInstance = new Chart(symbolWinRateCtx, {
         type: 'bar',
         data: {
             labels: winRateSymbols,
