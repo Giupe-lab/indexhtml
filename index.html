@@ -987,7 +987,204 @@
             SUPABASE_URL,
             SUPABASE_PUBLISHABLE_KEY
         );
-// TEST CONNESSIONE SUPABASE
+// =====================================
+// MY PNL - MOTORE DI CIFRATURA AES-256
+// =====================================
+
+const MYPNL_CRYPTO = {
+
+    async generateKey() {
+        return crypto.subtle.generateKey(
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt']
+        );
+    },
+
+    async encrypt(data, key) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+
+        const encoded = new TextEncoder().encode(
+            JSON.stringify(data)
+        );
+
+        const encrypted = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            encoded
+        );
+
+        return {
+            iv: Array.from(iv),
+            data: Array.from(new Uint8Array(encrypted))
+        };
+    },
+
+    async decrypt(payload, key) {
+        const decrypted = await crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: new Uint8Array(payload.iv)
+            },
+            key,
+            new Uint8Array(payload.data)
+        );
+
+        return JSON.parse(
+            new TextDecoder().decode(decrypted)
+        );
+    },
+
+    async deriveKey(password, salt) {
+        const baseKey = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(password),
+            'PBKDF2',
+            false,
+            ['deriveKey']
+        );
+
+        return crypto.subtle.deriveKey(
+            {
+                name: 'PBKDF2',
+                salt,
+                iterations: 310000,
+                hash: 'SHA-256'
+            },
+            baseKey,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+};
+  // =====================================
+// MY PNL - CODICE DI RECUPERO
+// =====================================
+
+function generateRecoveryCode() {
+    const bytes = crypto.getRandomValues(new Uint8Array(24));
+
+    return Array.from(bytes)
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function wrapEncryptionKey(encryptionKey, recoveryCode) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const recoveryKey = await MYPNL_CRYPTO.deriveKey(
+        recoveryCode,
+        salt
+    );
+
+    const rawKey = await crypto.subtle.exportKey(
+        'raw',
+        encryptionKey
+    );
+
+    const wrappedKey = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        recoveryKey,
+        rawKey
+    );
+
+    return {
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        wrappedKey: Array.from(new Uint8Array(wrappedKey))
+    };
+}
+
+async function unwrapEncryptionKey(wrappedData, recoveryCode) {
+    const recoveryKey = await MYPNL_CRYPTO.deriveKey(
+        recoveryCode,
+        new Uint8Array(wrappedData.salt)
+    );
+
+    const rawKey = await crypto.subtle.decrypt(
+        {
+            name: 'AES-GCM',
+            iv: new Uint8Array(wrappedData.iv)
+        },
+        recoveryKey,
+        new Uint8Array(wrappedData.wrappedKey)
+    );
+
+    return crypto.subtle.importKey(
+        'raw',
+        rawKey,
+        { name: 'AES-GCM' },
+        true,
+        ['encrypt', 'decrypt']
+    );
+}
+// =====================================
+// MY PNL - ARCHIVIO COMPLETO
+// =====================================
+
+function collectMyPnLData() {
+    const capitalKey = 'mypnl_initial_capital_' + currentUserId;
+
+    return {
+        trades: trades,
+        initialCapital: localStorage.getItem(capitalKey) || '0',
+        backtest: getBacktestData(),
+        version: 1,
+        updatedAt: new Date().toISOString()
+    };
+}
+
+async function encryptMyPnLArchive(encryptionKey, recoveryCode) {
+    const archive = collectMyPnLData();
+
+    const encryptedArchive = await MYPNL_CRYPTO.encrypt(
+        archive,
+        encryptionKey
+    );
+
+    const wrappedKey = await wrapEncryptionKey(
+        encryptionKey,
+        recoveryCode
+    );
+
+    return {
+        version: 1,
+        encryptedArchive,
+        wrappedKey
+    };
+}
+ // =====================================
+// MY PNL - SALVATAGGIO CLOUD CIFRATO
+// =====================================
+
+
+async function saveEncryptedArchive() {
+    if (!currentUserId || !currentEncryptionKey || !currentRecoveryCode) {
+        throw new Error('Chiavi di cifratura non disponibili.');
+    }
+
+    const archive = await encryptMyPnLArchive(
+        currentEncryptionKey,
+        currentRecoveryCode
+    );
+
+    const { error } = await supabaseClient
+        .from('private_trades')
+        .upsert({
+            user_id: currentUserId,
+            encrypted_data: JSON.stringify(archive),
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'user_id'
+        });
+
+    if (error) throw error;
+
+    console.log('Archivio cifrato sincronizzato.');
+}
+        // TEST CONNESSIONE SUPABASE
 supabaseClient.auth.getSession()
     .then(({ data, error }) => {
         if (error) {
@@ -2434,8 +2631,10 @@ function closeSettingsModal() {
     window.location.reload();
 } 
         let currentUserId = null;
+        let currentEncryptionKey = null;
+let currentRecoveryCode = null;
 // AUTENTICAZIONE MY PNL
-window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', async () => {
 
     const authScreen = document.getElementById('auth-screen');
     const authForm = document.getElementById('auth-form');
@@ -2485,8 +2684,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     currentUserId = data.user.id;
 
     authScreen.classList.add('hidden');
-    loadTrades();
-    renderAll();
+
+    try {
+        loadTrades();
+        renderAll();
+    } catch (error) {
+        console.error('Errore apertura My PnL:', error);
+        showAuthError('Errore durante il caricamento del diario.');
+    }
 }
 
     authToggle.addEventListener('click', () => {
