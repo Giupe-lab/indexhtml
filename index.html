@@ -1160,21 +1160,27 @@ async function encryptMyPnLArchive(encryptionKey, recoveryCode) {
 // =====================================
 
 
+
 async function saveEncryptedArchive() {
-    if (!currentUserId || !currentEncryptionKey || !currentRecoveryCode) {
-        throw new Error('Chiavi di cifratura non disponibili.');
+    if (!currentUserId || !currentEncryptionKey) {
+        throw new Error('Chiave di cifratura non disponibile.');
     }
 
-    const archive = await encryptMyPnLArchive(
-        currentEncryptionKey,
-        currentRecoveryCode
+    const archive = collectMyPnLData();
+
+    const encryptedArchive = await MYPNL_CRYPTO.encrypt(
+        archive,
+        currentEncryptionKey
     );
 
     const { error } = await supabaseClient
         .from('private_trades')
         .upsert({
             user_id: currentUserId,
-            encrypted_data: JSON.stringify(archive),
+            encrypted_data: JSON.stringify({
+                version: 2,
+                encryptedArchive
+            }),
             updated_at: new Date().toISOString()
         }, {
             onConflict: 'user_id'
@@ -1184,7 +1190,9 @@ async function saveEncryptedArchive() {
 
     console.log('Archivio cifrato sincronizzato.');
 }
-        async function initializeEncryptedCloud() {
+
+       
+async function initializeEncryptedCloud() {
     const { data, error } = await supabaseClient
         .from('private_trades')
         .select('encrypted_data')
@@ -1193,54 +1201,60 @@ async function saveEncryptedArchive() {
 
     if (error) throw error;
 
-    // Primo accesso: crea l'archivio cifrato
     if (!data) {
         currentEncryptionKey = await MYPNL_CRYPTO.generateKey();
-        currentRecoveryCode = generateRecoveryCode();
 
-        alert(
-            'CODICE DI RECUPERO MY PNL\n\n' +
-            currentRecoveryCode +
-            '\n\nCopialo e conservalo in un posto sicuro.'
+        const rawKey = await crypto.subtle.exportKey(
+            'raw',
+            currentEncryptionKey
         );
 
-        const confirmed = confirm('Hai salvato il codice di recupero?');
+        const keyBase64 = btoa(
+            String.fromCharCode(...new Uint8Array(rawKey))
+        );
 
-        if (!confirmed) {
-            currentEncryptionKey = null;
-            currentRecoveryCode = null;
-            throw new Error('Salva prima il codice di recupero.');
+        const { data: result, error: saveError } =
+            await supabaseClient.functions.invoke(
+                'mypnl-key-recovery',
+                { body: { action: 'save', key: keyBase64 } }
+            );
+
+        if (saveError || !result?.success) {
+            throw new Error('Impossibile proteggere la chiave dell’archivio.');
         }
 
         await saveEncryptedArchive();
         return;
     }
 
-    // Archivio già esistente: recupero con codice
-    let storedArchive;
+    const { data: result, error: keyError } =
+        await supabaseClient.functions.invoke(
+            'mypnl-key-recovery',
+            { body: { action: 'get' } }
+        );
 
-    try {
-        storedArchive = JSON.parse(data.encrypted_data);
-    } catch {
-        throw new Error('Archivio cloud non valido.');
+    if (keyError || !result?.key) {
+        throw new Error('Impossibile recuperare la chiave dell’archivio.');
     }
 
-    if (!storedArchive.encryptedArchive || !storedArchive.wrappedKey) {
-        throw new Error('Archivio non cifrato. Non è stato modificato.');
-    }
-
-    const recoveryCode = prompt('Inserisci il tuo codice di recupero My PnL:');
-
-    if (!recoveryCode) {
-        throw new Error('Recupero annullato.');
-    }
-
-    currentEncryptionKey = await unwrapEncryptionKey(
-        storedArchive.wrappedKey,
-        recoveryCode.trim()
+    const rawKey = Uint8Array.from(
+        atob(result.key),
+        c => c.charCodeAt(0)
     );
 
-    currentRecoveryCode = recoveryCode.trim();
+    currentEncryptionKey = await crypto.subtle.importKey(
+        'raw',
+        rawKey,
+        { name: 'AES-GCM' },
+        true,
+        ['encrypt', 'decrypt']
+    );
+
+    const storedArchive = JSON.parse(data.encrypted_data);
+
+    if (!storedArchive.encryptedArchive) {
+        throw new Error('Formato archivio non riconosciuto.');
+    }
 
     const archive = await MYPNL_CRYPTO.decrypt(
         storedArchive.encryptedArchive,
@@ -1257,9 +1271,13 @@ async function saveEncryptedArchive() {
     );
 
     if (archive.backtest) {
-        saveBacktestData(archive.backtest);
+        localStorage.setItem(
+            'mypnl_backtest_v1',
+            JSON.stringify(archive.backtest)
+        );
     }
 }
+
         // TEST CONNESSIONE SUPABASE
 supabaseClient.auth.getSession()
     .then(({ data, error }) => {
@@ -1371,7 +1389,7 @@ const WEEK_ORDINALS = [
         function saveTrades() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
 
-    if (currentUserId && currentEncryptionKey && currentRecoveryCode) {
+   if (currentUserId && currentEncryptionKey) {
         saveEncryptedArchive().catch(error => {
             console.error('Errore sincronizzazione cloud:', error);
             alert('Trade salvato sul dispositivo, ma sincronizzazione cloud non riuscita.');
@@ -2184,7 +2202,7 @@ function getBacktestData() {
 function saveBacktestData(data) {
     localStorage.setItem('mypnl_backtest_v1', JSON.stringify(data));
 
-    if (currentUserId && currentEncryptionKey && currentRecoveryCode) {
+    if (currentUserId && currentEncryptionKey) {
         saveEncryptedArchive().catch(error => {
             console.error('Errore sincronizzazione backtest:', error);
             alert('Backtest salvato sul dispositivo, ma sincronizzazione cloud non riuscita.');
@@ -2667,7 +2685,7 @@ async function saveInitialCapital() {
     const storageKey = 'mypnl_initial_capital_' + data.user.id;
 
    localStorage.setItem(storageKey, amount.toString());
-if (currentEncryptionKey && currentRecoveryCode) {
+if (currentUserId && currentEncryptionKey) {
     saveEncryptedArchive().catch(error => {
         console.error('Errore sincronizzazione capitale:', error);
         showToast('Capitale salvato localmente, ma sincronizzazione cloud non riuscita.');
@@ -2735,7 +2753,7 @@ function closeSettingsModal() {
 } 
         let currentUserId = null;
         let currentEncryptionKey = null;
-let currentRecoveryCode = null;
+
 // AUTENTICAZIONE MY PNL
     window.addEventListener('DOMContentLoaded', async () => {
 
