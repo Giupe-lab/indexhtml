@@ -745,56 +745,289 @@
 </div>
 
 <!-- BACKTESTING PAGE -->
-<div id="view-backtesting" class="hidden space-y-5 fade-in">
+<!-- MY PNL - INTERACTIVE BACKTESTER -->
+<section id="mynpl-backtest" aria-label="My PnL Interactive Backtester">
+  <style>
+    #mynpl-backtest{--mnp-bg:#0b1220;--mnp-card:#111c2e;--mnp-border:#26364d;--mnp-text:#e8eef8;--mnp-muted:#91a2ba;--mnp-blue:#5795ff;--mnp-green:#20c997;--mnp-red:#ff647c;color:var(--mnp-text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+    #mynpl-backtest *{box-sizing:border-box}
+    #mynpl-backtest .mnp-card{background:var(--mnp-card);border:1px solid var(--mnp-border);border-radius:13px;padding:15px}
+    #mynpl-backtest .mnp-muted{color:var(--mnp-muted)}
+    #mynpl-backtest .mnp-controls{display:flex;flex-wrap:wrap;gap:9px;align-items:end}
+    #mynpl-backtest label{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--mnp-muted);font-weight:600}
+    #mynpl-backtest input,#mynpl-backtest select{background:#0a1322;color:var(--mnp-text);border:1px solid var(--mnp-border);border-radius:8px;padding:9px 10px;min-width:0;max-width:100%;font:inherit}
+    #mynpl-backtest button{border:1px solid var(--mnp-border);background:#1b2a40;color:var(--mnp-text);border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}
+    #mynpl-backtest button:hover{filter:brightness(1.15)}
+    #mynpl-backtest button:disabled{opacity:.4;cursor:not-allowed}
+    #mynpl-backtest .mnp-primary{background:#2563eb;border-color:#2563eb}
+    #mynpl-backtest .mnp-long{background:#087e61;border-color:#087e61}
+    #mynpl-backtest .mnp-short{background:#b93852;border-color:#b93852}
+    #mynpl-backtest .mnp-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+    #mynpl-backtest .mnp-metric{background:#0a1322;border:1px solid var(--mnp-border);border-radius:10px;padding:10px;min-width:0}
+    #mynpl-backtest .mnp-metric small{display:block;color:var(--mnp-muted);font-size:10px;margin-bottom:5px}
+    #mynpl-backtest .mnp-metric strong{font-size:16px;overflow-wrap:anywhere}
+    #mynpl-backtest .mnp-chart-wrap{height:490px;position:relative;background:#080f1b;border:1px solid var(--mnp-border);border-radius:10px;overflow:hidden}
+    #mynpl-backtest .mnp-chart{position:absolute;inset:0}
+    #mynpl-backtest .mnp-overlay{position:absolute;inset:0;pointer-events:none;z-index:5}
+    #mynpl-backtest .mnp-zone{position:absolute;left:0;right:58px;pointer-events:none}
+    #mynpl-backtest .mnp-zone-profit{background:rgba(32,201,151,.12);border-top:1px solid rgba(32,201,151,.5);border-bottom:1px solid rgba(32,201,151,.5)}
+    #mynpl-backtest .mnp-zone-risk{background:rgba(255,100,124,.13);border-top:1px solid rgba(255,100,124,.5);border-bottom:1px solid rgba(255,100,124,.5)}
+    #mynpl-backtest .mnp-level{position:absolute;left:0;right:0;height:0;border-top:2px dashed;pointer-events:auto;cursor:ns-resize;touch-action:none}
+    #mynpl-backtest .mnp-level:before{content:"";position:absolute;left:0;right:0;top:-9px;height:18px}
+    #mynpl-backtest .mnp-level span{position:absolute;right:4px;top:-13px;padding:4px 7px;border-radius:5px;color:white;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px #0008;user-select:none}
+    #mynpl-backtest .mnp-entry{border-color:#f5c451;border-top-style:solid}
+    #mynpl-backtest .mnp-entry span{background:#946b12}
+    #mynpl-backtest .mnp-sl{border-color:var(--mnp-red)}
+    #mynpl-backtest .mnp-sl span{background:#a52e48}
+    #mynpl-backtest .mnp-tp{border-color:var(--mnp-green)}
+    #mynpl-backtest .mnp-tp span{background:#087e61}
+    #mynpl-backtest .mnp-hint{font-size:11px;color:var(--mnp-muted);margin-top:8px}
+    #mynpl-backtest .mnp-replay{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    #mynpl-backtest input[type=range]{padding:0;accent-color:#5795ff;flex:1;min-width:130px}
+    #mynpl-backtest .mnp-table-wrap{overflow:auto}
+    #mynpl-backtest table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+    #mynpl-backtest th,#mynpl-backtest td{text-align:left;padding:9px;border-bottom:1px solid var(--mnp-border)}
+    #mynpl-backtest th{color:var(--mnp-muted);font-weight:700}
+    #mynpl-backtest .mnp-positive{color:var(--mnp-green)}
+    #mynpl-backtest .mnp-negative{color:var(--mnp-red)}
+    #mynpl-backtest .mnp-status{font-size:11px;color:var(--mnp-muted);min-height:16px}
+    @media(max-width:760px){#mynpl-backtest .mnp-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#mynpl-backtest .mnp-chart-wrap{height:390px}#mynpl-backtest .mnp-level span{font-size:9px;right:2px}#mynpl-backtest .mnp-zone{right:52px}}
+  </style>
 
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-        <h2 class="text-lg font-bold text-white mb-1">Backtesting</h2>
-        <p class="text-xs text-slate-400">
-            Testa le tue strategie sui dati storici e analizza le loro performance.
-        </p>
+  <div class="mnp-card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap">
+      <div><h2 style="font-size:19px;font-weight:800;margin:0 0 5px">Backtesting Studio</h2><p class="mnp-muted" style="font-size:12px;margin:0">Grafico interattivo con livelli Entry, Stop Loss e Take Profit trascinabili</p></div>
+      <span style="font-size:10px;border:1px solid #8a6b27;color:#f5c451;border-radius:20px;padding:5px 9px">DEMO · DATI SIMULATI</span>
     </div>
+  </div>
 
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-4">Crea una strategia</h3>
-
-        <form id="backtest-strategy-form" onsubmit="handleCreateBacktestStrategy(event)" class="space-y-3">
-            <input id="backtest-strategy-name" required placeholder="Nome strategia"
-                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
-
-            <input id="backtest-symbol" required placeholder="Mercato (es. NQ, ES, MNQ)"
-                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
-
-            <input id="backtest-timeframe" placeholder="Timeframe (es. 5 minuti)"
-                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
-
-            <input id="backtest-point-value" type="number" step="0.01" min="0.01" required
-                placeholder="Valore per punto (es. NQ = 20)"
-                class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-white">
-
-            <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-3 w-full font-semibold">
-                Crea strategia
-            </button>
-        </form>
+  <div class="mnp-card" style="margin-bottom:12px">
+    <div class="mnp-controls">
+      <label>Mercato<select id="mnp-symbol"><option>NASDAQ 100</option><option>Dow Jones 30</option><option>DAX 40</option><option>XAUUSD</option><option>BTCUSD</option><option>ETHUSD</option><option>NVDA</option></select></label>
+      <label>Timeframe<select id="mnp-timeframe"><option value="1">1m</option><option value="5" selected>5m</option><option value="15">15m</option><option value="60">1h</option><option value="240">4h</option><option value="1440">1D</option></select></label>
+      <label>Quantità<input id="mnp-qty" type="number" min="0.01" step="0.01" value="1" style="width:95px"></label>
+      <label>Valore per punto<input id="mnp-point" type="number" min="0.0001" step="0.01" value="1" style="width:110px"></label>
+      <button id="mnp-refresh" class="mnp-primary">Nuovo grafico demo</button>
     </div>
+  </div>
 
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-3">Le tue strategie</h3>
-        <div id="backtest-strategies-list" class="text-sm text-slate-400">
-            Nessuna strategia ancora creata.
-        </div>
+  <div class="mnp-card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div><strong id="mnp-chart-title">NASDAQ 100 · 5m</strong><div class="mnp-muted" style="font-size:10px">Trascina le tre linee direttamente sul grafico</div></div>
+      <div style="display:flex;gap:7px"><button id="mnp-long" class="mnp-long">LONG</button><button id="mnp-short" class="mnp-short">SHORT</button></div>
     </div>
-
-    <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-3">Operazioni storiche</h3>
-        <p class="text-xs text-slate-400">
-            Qui inseriremo le operazioni della strategia selezionata e calcoleremo automaticamente i risultati.
-        </p>
-        <div id="backtest-trades-list" class="mt-4 text-sm text-slate-400">
-            Seleziona una strategia per iniziare.
-        </div>
+    <div class="mnp-chart-wrap" id="mnp-chart-wrap">
+      <div id="mnp-chart" class="mnp-chart"></div>
+      <div id="mnp-overlay" class="mnp-overlay">
+        <div id="mnp-profit-zone" class="mnp-zone mnp-zone-profit"></div>
+        <div id="mnp-risk-zone" class="mnp-zone mnp-zone-risk"></div>
+        <div id="mnp-entry-line" class="mnp-level mnp-entry"><span id="mnp-entry-label">ENTRY</span></div>
+        <div id="mnp-sl-line" class="mnp-level mnp-sl"><span id="mnp-sl-label">STOP LOSS</span></div>
+        <div id="mnp-tp-line" class="mnp-level mnp-tp"><span id="mnp-tp-label">TAKE PROFIT</span></div>
+      </div>
     </div>
+    <div class="mnp-hint">Linea gialla = Entry · linea rossa = Stop Loss · linea verde = Take Profit. Afferra una linea e trascinala in alto o in basso. Puoi anche spostare il grafico normalmente trascinando in uno spazio libero.</div>
+    <div id="mnp-status" class="mnp-status" style="margin-top:7px">Caricamento grafico…</div>
+  </div>
 
-</div>
+  <div class="mnp-card" style="margin-bottom:12px">
+    <div class="mnp-metrics">
+      <div class="mnp-metric"><small>ENTRY</small><strong id="mnp-entry-value">—</strong></div>
+      <div class="mnp-metric"><small>STOP LOSS</small><strong id="mnp-sl-value">—</strong></div>
+      <div class="mnp-metric"><small>TAKE PROFIT</small><strong id="mnp-tp-value">—</strong></div>
+      <div class="mnp-metric"><small>PERDITA POTENZIALE</small><strong id="mnp-risk-value" class="mnp-negative">—</strong></div>
+      <div class="mnp-metric"><small>PROFITTO POTENZIALE</small><strong id="mnp-reward-value" class="mnp-positive">—</strong></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px">
+      <div><span class="mnp-muted" style="font-size:11px">RAPPORTO RISCHIO / RENDIMENTO</span><div id="mnp-rr" style="font-size:24px;font-weight:900">—</div></div>
+      <div style="text-align:right"><span class="mnp-muted" style="font-size:11px">DIREZIONE</span><div id="mnp-direction" style="font-weight:800">LONG</div></div>
+    </div>
+  </div>
+
+  <div class="mnp-card" style="margin-bottom:12px">
+    <div class="mnp-replay">
+      <button id="mnp-back10">−10 candele</button><button id="mnp-step">Avanza 1 candela</button><button id="mnp-play" class="mnp-primary">▶ Play</button><button id="mnp-reset">Reset replay</button>
+      <input id="mnp-slider" type="range" min="30" max="300" value="120">
+      <strong id="mnp-candle-count" style="font-size:11px;min-width:80px;text-align:right">120 / 300</strong>
+    </div>
+    <div class="mnp-hint">Il replay mostra le candele progressivamente. Se una candela tocca sia SL sia TP, il simulatore considera raggiunto prima lo Stop Loss (criterio prudenziale).</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button id="mnp-open" class="mnp-primary">Apri operazione al prezzo Entry</button>
+      <button id="mnp-close">Chiudi operazione al prezzo corrente</button>
+      <button id="mnp-export">Esporta CSV</button>
+    </div>
+    <div id="mnp-position-status" class="mnp-status" style="margin-top:8px">Nessuna operazione aperta.</div>
+  </div>
+
+  <div class="mnp-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><strong>Diario operazioni demo</strong><button id="mnp-clear">Cancella diario demo</button></div>
+    <div class="mnp-table-wrap" style="margin-top:8px">
+      <table><thead><tr><th>Mercato</th><th>Direzione</th><th>Entry</th><th>Uscita</th><th>Esito</th><th>P&L</th></tr></thead><tbody id="mnp-trades"><tr><td colspan="6" class="mnp-muted">Nessuna operazione registrata.</td></tr></tbody></table>
+    </div>
+    <p class="mnp-hint">Questa demo salva il diario solo in questo browser (localStorage). Non è ancora collegata a Supabase e non modifica il diario principale di My PnL.</p>
+  </div>
+</section>
+
+<script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+(function(){
+  const root=document.getElementById('mynpl-backtest');
+  if(!root || root.dataset.initialized==='1') return;
+  root.dataset.initialized='1';
+  const $=id=>root.querySelector('#'+id);
+  const fmt=n=>Number(n).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:5});
+  const money=n=>(n<0?'−':'')+'$'+fmt(Math.abs(n));
+  const state={bars:[],visible:120,index:120,direction:'LONG',levels:{entry:0,sl:0,tp:0},position:null,trades:[],timer:null,chart:null,series:null,drag:null};
+  try{state.trades=JSON.parse(localStorage.getItem('mynpl_backtest_replay_v2')||'[]')}catch(e){state.trades=[]}
+  function status(s){$('mnp-status').textContent=s}
+  function saveTrades(){try{localStorage.setItem('mynpl_backtest_replay_v2',JSON.stringify(state.trades))}catch(e){} renderTrades()}
+  function makeBars(){
+    const symbol=$('mnp-symbol').value, tf=Number($('mnp-timeframe').value);
+    const bases={'NASDAQ 100':19000,'Dow Jones 30':42000,'DAX 40':18500,'XAUUSD':2650,'BTCUSD':95000,'ETHUSD':3300,'NVDA':145};
+    let p=bases[symbol]||1000, now=Math.floor(Date.now()/1000)-300*tf*60, out=[];
+    let seed=Array.from(symbol).reduce((a,c)=>a+c.charCodeAt(0),0)+tf;
+    const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+    for(let i=0;i<300;i++){
+      const drift=(rnd()-.49)*p*.0018, open=p, close=Math.max(p*.5,p+drift), spread=p*(.00035+rnd()*.0006);
+      out.push({time:now+i*tf*60,open,high:Math.max(open,close)+spread*rnd(),low:Math.min(open,close)-spread*rnd(),close});
+      p=close;
+    }
+    state.bars=out;state.index=120;state.visible=120;
+    const last=out[119].close, risk=last*.003;
+    state.levels={entry:last,sl:state.direction==='LONG'?last-risk:last+risk,tp:state.direction==='LONG'?last+risk*2:last-risk*2};
+    state.position=null;
+    $('mnp-chart-title').textContent=symbol+' · '+$('mnp-timeframe').selectedOptions[0].textContent;
+    $('mnp-slider').min=30;$('mnp-slider').max=300;$('mnp-slider').value=120;
+    $('mnp-candle-count').textContent='120 / 300';
+    renderChart();updateLevels();$('mnp-position-status').textContent='Nessuna operazione aperta.';status('Grafico demo generato. I prezzi sono simulati, non quotazioni reali.');
+  }
+  function ensureChart(){
+    if(state.chart)return;
+    if(!window.LightweightCharts){status('Impossibile caricare il motore grafico. Controlla la connessione e ricarica la pagina.');return}
+    const el=$('mnp-chart');
+    state.chart=LightweightCharts.createChart(el,{width:el.clientWidth,height:el.clientHeight,layout:{background:{color:'#080f1b'},textColor:'#91a2ba',fontFamily:'Inter,system-ui,sans-serif'},grid:{vertLines:{color:'#172337'},horzLines:{color:'#172337'}},rightPriceScale:{borderColor:'#26364d'},timeScale:{borderColor:'#26364d',timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+    state.series=state.chart.addCandlestickSeries({upColor:'#20c997',downColor:'#ff647c',borderUpColor:'#20c997',borderDownColor:'#ff647c',wickUpColor:'#20c997',wickDownColor:'#ff647c'});
+    const ro=new ResizeObserver(()=>{if(state.chart){state.chart.applyOptions({width:el.clientWidth,height:el.clientHeight});drawOverlay()}});
+    ro.observe(el);
+    state.chart.timeScale().subscribeVisibleLogicalRangeChange(drawOverlay);
+  }
+  function renderChart(){
+    ensureChart();if(!state.series)return;
+    state.series.setData(state.bars.slice(0,state.index));
+    state.chart.timeScale().fitContent();
+    drawOverlay();
+  }
+  function priceY(price){return state.series?state.series.priceToCoordinate(price):null}
+  function drawOverlay(){
+    if(!state.series||!state.bars.length)return;
+    const {entry,sl,tp}=state.levels, yE=priceY(entry),yS=priceY(sl),yT=priceY(tp);
+    if([yE,yS,yT].some(v=>v===null||!Number.isFinite(v)))return;
+    const set=(id,y)=>$(id).style.top=y+'px';
+    set('mnp-entry-line',yE);set('mnp-sl-line',yS);set('mnp-tp-line',yT);
+    $('mnp-entry-label').textContent='ENTRY '+fmt(entry);
+    $('mnp-sl-label').textContent='SL '+fmt(sl);
+    $('mnp-tp-label').textContent='TP '+fmt(tp);
+    const profitTop=Math.min(yE,yT),riskTop=Math.min(yE,yS);
+    $('mnp-profit-zone').style.top=profitTop+'px';$('mnp-profit-zone').style.height=Math.max(0,Math.abs(yE-yT))+'px';
+    $('mnp-risk-zone').style.top=riskTop+'px';$('mnp-risk-zone').style.height=Math.max(0,Math.abs(yE-yS))+'px';
+  }
+  function updateLevels(){
+    if(!state.bars.length)return;
+    const {entry,sl,tp}=state.levels,qty=Math.max(.0001,Number($('mnp-qty').value)||1),point=Math.max(.0001,Number($('mnp-point').value)||1);
+    const risk=Math.abs(entry-sl)*qty*point,reward=Math.abs(tp-entry)*qty*point;
+    $('mnp-entry-value').textContent=fmt(entry);$('mnp-sl-value').textContent=fmt(sl);$('mnp-tp-value').textContent=fmt(tp);
+    $('mnp-risk-value').textContent=money(-risk);$('mnp-reward-value').textContent=money(reward);
+    $('mnp-rr').textContent=risk>0?(reward/risk).toFixed(2)+' R':'—';
+    $('mnp-direction').textContent=state.direction;
+    $('mnp-direction').style.color=state.direction==='LONG'?'#20c997':'#ff647c';
+    drawOverlay();
+  }
+  function validLevels(){
+    const {entry,sl,tp}=state.levels;
+    return state.direction==='LONG'?(sl<entry&&tp>entry):(sl>entry&&tp<entry);
+  }
+  function setDirection(dir){
+    state.direction=dir;
+    const p=state.levels.entry, d=Math.abs(p-state.levels.sl)||p*.003;
+    state.levels.sl=dir==='LONG'?p-d:p+d;
+    state.levels.tp=dir==='LONG'?p+d*2:p-d*2;
+    updateLevels();
+  }
+  function dragStart(key,e){
+    e.preventDefault();e.stopPropagation();
+    state.drag=key;
+    document.body.style.userSelect='none';
+  }
+  ['entry','sl','tp'].forEach(k=>$(k==='entry'?'mnp-entry-line':k==='sl'?'mnp-sl-line':'mnp-tp-line').addEventListener('pointerdown',e=>dragStart(k,e)));
+  window.addEventListener('pointermove',e=>{
+    if(!state.drag||!state.series)return;
+    const rect=$('mnp-chart-wrap').getBoundingClientRect(), price=state.series.coordinateToPrice(e.clientY-rect.top);
+    if(price===null||!Number.isFinite(price))return;
+    state.levels[state.drag]=price;
+    updateLevels();
+  });
+  window.addEventListener('pointerup',()=>{if(state.drag){state.drag=null;document.body.style.userSelect=''}});
+  function stopPlay(){if(state.timer){clearInterval(state.timer);state.timer=null}$('mnp-play').textContent='▶ Play'}
+  function showIndex(i){
+    state.index=Math.max(30,Math.min(300,i));$('mnp-slider').value=state.index;$('mnp-candle-count').textContent=state.index+' / 300';
+    state.series.setData(state.bars.slice(0,state.index));drawOverlay();
+    const bar=state.bars[state.index-1];
+    if(state.position&&bar){
+      const p=state.position, hitSL=p.direction==='LONG'?bar.low<=p.sl:bar.high>=p.sl, hitTP=p.direction==='LONG'?bar.high>=p.tp:bar.low<=p.tp;
+      if(hitSL||hitTP){
+        const exit=hitSL?p.sl:p.tp, result=(p.direction==='LONG'?exit-p.entry:p.entry-exit)*p.qty*p.point;
+        state.trades.unshift({...p,exit,result,outcome:hitSL?'STOP LOSS':'TAKE PROFIT',symbol:$('mnp-symbol').value});
+        state.position=null;saveTrades();
+        $('mnp-position-status').textContent='Operazione chiusa: '+(hitSL?'STOP LOSS':'TAKE PROFIT')+' · P&L '+money(result);
+        stopPlay();
+      }
+    }
+  }
+  function openPosition(){
+    if(state.position){$('mnp-position-status').textContent='Hai già un’operazione aperta.';return}
+    if(!validLevels()){$('mnp-position-status').textContent='Livelli non validi: per LONG lo SL deve stare sotto Entry e il TP sopra; per SHORT il contrario.';return}
+    const b=state.bars[state.index-1];
+    state.position={direction:state.direction,entry:state.levels.entry,sl:state.levels.sl,tp:state.levels.tp,qty:Math.max(.0001,Number($('mnp-qty').value)||1),point:Math.max(.0001,Number($('mnp-point').value)||1),openedAt:b.time};
+    $('mnp-position-status').textContent='Operazione '+state.direction+' aperta al livello Entry '+fmt(state.levels.entry)+'. Avanza il replay per verificare SL o TP.';
+  }
+  function closePosition(){
+    if(!state.position){$('mnp-position-status').textContent='Non ci sono operazioni aperte.';return}
+    const p=state.position,b=state.bars[state.index-1],exit=b.close,result=(p.direction==='LONG'?exit-p.entry:p.entry-exit)*p.qty*p.point;
+    state.trades.unshift({...p,exit,result,outcome:'CHIUSURA MANUALE',symbol:$('mnp-symbol').value});state.position=null;saveTrades();
+    $('mnp-position-status').textContent='Operazione chiusa manualmente · P&L '+money(result);
+  }
+  function renderTrades(){
+    const body=$('mnp-trades');
+    if(!state.trades.length){body.innerHTML='<tr><td colspan="6" class="mnp-muted">Nessuna operazione registrata.</td></tr>';return}
+    body.innerHTML=state.trades.slice(0,100).map(t=>'<tr><td>'+t.symbol+'</td><td>'+t.direction+'</td><td>'+fmt(t.entry)+'</td><td>'+fmt(t.exit)+'</td><td>'+t.outcome+'</td><td class="'+(t.result>=0?'mnp-positive':'mnp-negative')+'">'+money(t.result)+'</td></tr>').join('');
+  }
+  $('mnp-long').addEventListener('click',()=>setDirection('LONG'));
+  $('mnp-short').addEventListener('click',()=>setDirection('SHORT'));
+  $('mnp-refresh').addEventListener('click',()=>{stopPlay();makeBars()});
+  $('mnp-symbol').addEventListener('change',makeBars);$('mnp-timeframe').addEventListener('change',makeBars);
+  $('mnp-qty').addEventListener('input',updateLevels);$('mnp-point').addEventListener('input',updateLevels);
+  $('mnp-slider').addEventListener('input',e=>{stopPlay();showIndex(Number(e.target.value))});
+  $('mnp-step').addEventListener('click',()=>{stopPlay();showIndex(state.index+1)});
+  $('mnp-back10').addEventListener('click',()=>{stopPlay();showIndex(state.index-10)});
+  $('mnp-reset').addEventListener('click',()=>{stopPlay();state.position=null;showIndex(120);$('mnp-position-status').textContent='Replay riportato alla candela 120. Nessuna operazione aperta.'});
+  $('mnp-play').addEventListener('click',()=>{if(state.timer){stopPlay();return}if(state.index>=300)showIndex(120);$('mnp-play').textContent='Ⅱ Pausa';state.timer=setInterval(()=>{if(state.index>=300){stopPlay();return}showIndex(state.index+1)},650)});
+  $('mnp-open').addEventListener('click',openPosition);$('mnp-close').addEventListener('click',closePosition);
+  $('mnp-clear').addEventListener('click',()=>{if(confirm('Cancellare tutte le operazioni demo salvate in questo browser?')){state.trades=[];saveTrades()}});
+  $('mnp-export').addEventListener('click',()=>{
+    const rows=[['Mercato','Direzione','Entry','Uscita','Esito','PnL'],...state.trades.map(t=>[t.symbol,t.direction,t.entry,t.exit,t.outcome,t.result])];
+    const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='mynpl-backtest-demo.csv';a.click();URL.revokeObjectURL(a.href);
+  });
+  renderTrades();
+  if(window.LightweightCharts)makeBars();
+  else{
+    const old=document.querySelector('script[src*="lightweight-charts"]');
+    if(old)old.addEventListener('load',makeBars,{once:true});
+    else status('Motore grafico non disponibile: verifica la connessione internet e ricarica.');
+  }
+})();
+</script>
+<!-- END MY PNL - INTERACTIVE BACKTESTER -->
+
 
 
                 <!-- ========================================================= -->
