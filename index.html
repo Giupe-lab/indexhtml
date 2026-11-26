@@ -2794,8 +2794,9 @@ renderAll();
     } catch (error) {
         console.error('Errore apertura My PnL:', error);
         showAuthError(error.message || 'Errore durante il caricamento del diario.');
-}
-
+ 
+   }
+ }
     authToggle.addEventListener('click', () => {
         setAuthMode(authMode === 'login' ? 'signup' : 'login');
     });
