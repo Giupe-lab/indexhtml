@@ -2868,14 +2868,15 @@ renderAll();
     });
 
     // Controlla se esiste già una sessione
-    const { data, error } = await supabaseClient.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+    await supabaseClient.auth.getSession();
 
-    if (error) {
+    if (sessionError) {
         showAuthError('Errore durante il controllo della sessione.');
         return;
     }
 
-    if (data.session) {
+    if (sessionData.session) {
     await enterApp();
 } else {
     authScreen.classList.remove('hidden');
