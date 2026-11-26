@@ -2900,17 +2900,18 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
 
     currentUserId = data.user.id;
 
-    authScreen.classList.add('hidden');
+    loadTrades();
 
     try {
-        loadTrades();
-await initializeEncryptedCloud();
-renderAll();
+        await initializeEncryptedCloud();
     } catch (error) {
-        console.error('Errore apertura My PnL:', error);
-        showAuthError(error.message || 'Errore durante il caricamento del diario.');
- 
-   }
+        console.error('Sincronizzazione cloud non disponibile:', error);
+    }
+
+    renderAll();
+
+    authScreen.classList.add('hidden');
+}
  }
     authToggle.addEventListener('click', () => {
         setAuthMode(authMode === 'login' ? 'signup' : 'login');
