@@ -2940,9 +2940,12 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
                 });
             } else {
                 result = await supabaseClient.auth.signUp({
-                    email,
-                    password
-                });
+    email,
+    password,
+    options: {
+        emailRedirectTo: 'https://giupe-lab.github.io/indexhtml/'
+    }
+});
             }
 
             if (result.error) {
