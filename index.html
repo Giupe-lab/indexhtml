@@ -1387,6 +1387,13 @@
             }
         };
 
+        // Carica Turnstile dopo aver definito la callback globale.
+        const turnstileScript = document.createElement('script');
+        turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=initMyPnlTurnstile&render=explicit';
+        turnstileScript.async = true;
+        turnstileScript.defer = true;
+        document.head.appendChild(turnstileScript);
+
         // COLLEGAMENTO SUPABASE
         const SUPABASE_URL = 'https://gquznadnquwbkmieaema.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_u6WNqQR_Uplb6PDh6anYTA_r_d9b_0A';
