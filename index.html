@@ -220,6 +220,97 @@
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 20px rgba(0,0,0,.2);
 }
 </style>
+
+<style id="mypnl-clarity-fluidity">
+/* My PnL — leggibilità e fluidità, senza alterare dati o componenti */
+:root {
+  --ui-border: rgba(203, 213, 225, .15);
+  --ui-muted: #aebbd0;
+  --ui-text: #edf3ff;
+  --ui-glass: rgba(20, 29, 47, .78);
+}
+html { scroll-behavior: smooth; }
+body {
+  color: var(--ui-text);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+p, label, small, .text-slate-400, .text-slate-500 {
+  color: var(--ui-muted);
+}
+.text-slate-300 { color: #d3deef !important; }
+.text-slate-200 { color: #e4ecfa !important; }
+button, a, input, select, textarea {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, opacity .16s ease;
+}
+button:disabled { cursor: not-allowed; opacity: .58; }
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, .95);
+  outline-offset: 3px;
+}
+input, select, textarea {
+  color: #f1f5ff;
+  border-color: rgba(148, 163, 184, .24);
+}
+input::placeholder, textarea::placeholder { color: #8290a8; opacity: 1; }
+/* Vetro più leggero: meno blur e superfici più leggibili */
+#view-dashboard .rounded-2xl, #view-dashboard .rounded-xl,
+#view-calendar .rounded-2xl, #view-calendar .rounded-xl,
+#view-stats .rounded-2xl, #view-stats .rounded-xl,
+#view-journal .rounded-2xl, #view-journal .rounded-xl,
+#view-insights .rounded-2xl, #view-insights .rounded-xl,
+#view-diary .rounded-2xl, #view-diary .rounded-xl,
+#view-playbooks .rounded-2xl, #view-playbooks .rounded-xl,
+#view-economic-calendar .rounded-2xl, #view-economic-calendar .rounded-xl,
+#view-backtesting .rounded-2xl, #view-backtesting .rounded-xl {
+  backdrop-filter: blur(6px) saturate(115%);
+  -webkit-backdrop-filter: blur(6px) saturate(115%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.11), 0 8px 24px rgba(0,0,0,.17);
+}
+#view-dashboard .rounded-2xl:hover, #view-dashboard .rounded-xl:hover,
+#view-calendar .rounded-2xl:hover, #view-calendar .rounded-xl:hover,
+#view-stats .rounded-2xl:hover, #view-stats .rounded-xl:hover,
+#view-journal .rounded-2xl:hover, #view-journal .rounded-xl:hover,
+#view-insights .rounded-2xl:hover, #view-insights .rounded-xl:hover,
+#view-diary .rounded-2xl:hover, #view-diary .rounded-xl:hover,
+#view-playbooks .rounded-2xl:hover, #view-playbooks .rounded-xl:hover,
+#view-economic-calendar .rounded-2xl:hover, #view-economic-calendar .rounded-xl:hover,
+#view-backtesting .rounded-2xl:hover, #view-backtesting .rounded-xl:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 11px 27px rgba(0,0,0,.2);
+}
+/* Evita animazioni pesanti e riduce i micro-scatti durante la navigazione */
+.fade-in { animation-duration: .16s; }
+#sidebar { overscroll-behavior: contain; }
+main, #main-content { min-width: 0; }
+img, canvas, svg { max-width: 100%; }
+@media (max-width: 1023px) {
+  body { -webkit-text-size-adjust: 100%; }
+  #sidebar { overscroll-behavior: contain; }
+}
+@media (max-width: 768px) {
+  main, #main-content, [class*="max-w-"] { min-width: 0; }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  button, a, select { touch-action: manipulation; }
+  input, select, textarea { font-size: 16px; }
+  .rounded-2xl, .rounded-xl { scroll-margin-top: 1rem; }
+  #view-dashboard .rounded-2xl, #view-calendar .rounded-2xl,
+  #view-stats .rounded-2xl, #view-journal .rounded-2xl {
+    backdrop-filter: blur(4px) saturate(110%);
+    -webkit-backdrop-filter: blur(4px) saturate(110%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+
 </head>
 <body class="bg-navy-900 text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
 
