@@ -109,18 +109,23 @@
         #view-journal > div { animation: fadeIn .24s ease-out both; }
         #view-dashboard .rounded-2xl,
         #view-dashboard .rounded-xl {
-            box-shadow: 0 12px 34px rgba(0,0,0,.16);
-            transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+            border-color: rgba(210,225,255,.16);
             background-image:
-                linear-gradient(128deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.008) 38%, rgba(255,255,255,.018) 100%),
-                radial-gradient(ellipse at 0% 0%, rgba(96,165,250,.035), transparent 58%);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 34px rgba(0,0,0,.16);
-            backdrop-filter: blur(3px);
+                linear-gradient(132deg, rgba(255,255,255,.17) 0%, rgba(255,255,255,.075) 9%, rgba(255,255,255,.018) 31%, transparent 48%, rgba(255,255,255,.055) 72%, rgba(255,255,255,.018) 100%),
+                radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.15), transparent 48%),
+                radial-gradient(ellipse at 100% 100%, rgba(96,165,250,.10), transparent 58%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(255,255,255,.035), 0 14px 38px rgba(0,0,0,.24);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
         }
         #view-dashboard .rounded-2xl:hover,
         #view-dashboard .rounded-xl:hover {
-            border-color: rgba(148,163,184,.32);
-            box-shadow: 0 18px 42px rgba(0,0,0,.22);
+            border-color: rgba(220,235,255,.30);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 18px 44px rgba(0,0,0,.28);
         }
         #view-dashboard [id^="dash-"] {
             font-variant-numeric: tabular-nums;
@@ -153,6 +158,13 @@
         <p id="auth-description" class="mb-6 text-sm text-slate-400">Accedi al tuo account per continuare.</p>
 
         <form id="auth-form" class="space-y-4">
+
+            <div id="auth-name-field" class="hidden">
+                <label for="auth-name" class="mb-2 block text-sm text-slate-300">Nome</label>
+                <input id="auth-name" type="text" name="mypnl-signup-name" autocomplete="given-name" maxlength="60"
+                    class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white outline-none focus:border-blue-500"
+                    placeholder="Come ti chiami?">
+            </div>
 
             <div>
                 <label class="mb-2 block text-sm text-slate-300">Email</label>
@@ -541,7 +553,7 @@
     <!-- DASHBOARD HEADER -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h2 id="dashboard-greeting" class="text-xl sm:text-2xl font-bold tracking-tight text-white">Ciao!</h2>
+            <h2 id="dashboard-greeting" class="text-lg sm:text-xl font-bold tracking-tight text-white">Ciao!</h2>
             <p class="text-sm text-slate-400 mt-1">Ecco il riepilogo delle tue performance di trading</p>
         </div>
         <div class="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
@@ -3222,6 +3234,8 @@ function closeSettingsModal() {
     const authForm = document.getElementById('auth-form');
     const authEmail = document.getElementById('auth-email');
     const authPassword = document.getElementById('auth-password');
+    const authName = document.getElementById('auth-name');
+    const authNameField = document.getElementById('auth-name-field');
     const authTitle = document.getElementById('auth-title');
     const authDescription = document.getElementById('auth-description');
     const authSubmit = document.getElementById('auth-submit');
@@ -3310,12 +3324,17 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
             authDescription.textContent = 'Accedi al tuo account per continuare.';
             authSubmit.textContent = 'Accedi';
             authToggle.textContent = 'Non hai un account? Registrati';
+            authNameField.classList.add('hidden');
+            authName.required = false;
+            authName.value = '';
             authPassword.autocomplete = 'current-password';
         } else {
             authTitle.textContent = 'Crea il tuo account';
             authDescription.textContent = 'Registrati per iniziare a usare My PnL.';
             authSubmit.textContent = 'Registrati';
             authToggle.textContent = 'Hai già un account? Accedi';
+            authNameField.classList.remove('hidden');
+            authName.required = true;
             authPassword.autocomplete = 'new-password';
         }
     }
@@ -3330,7 +3349,7 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
 
     currentUserId = data.user.id;
 
-    // Usa il nome del profilo; in assenza, ricava un nome leggibile dall'email.
+    // Il nome scelto in fase di registrazione viene salvato nei metadati Supabase.
     const userMetadata = data.user.user_metadata || {};
     const profileName = userMetadata.full_name || userMetadata.name ||
         userMetadata.first_name || userMetadata.display_name ||
@@ -3362,6 +3381,8 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     // Allinea i controlli del calendario ai dati effettivamente recuperati dal cloud.
     selectCalendarMonthForLatestTrade();
     renderAll();
+    // Ogni accesso parte dalla Dashboard, non dal Calendario.
+    switchView('dashboard');
 
     authScreen.classList.add('hidden');
 
@@ -3379,6 +3400,15 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
 
         const email = authEmail.value.trim();
         const password = authPassword.value;
+        const displayName = authName.value.trim();
+
+        if (authMode === 'signup' && !displayName) {
+            showAuthError('Inserisci il tuo nome per completare la registrazione.');
+            authName.focus();
+            authSubmit.disabled = false;
+            authSubmit.textContent = 'Registrati';
+            return;
+        }
 
         try {
             let result;
@@ -3390,12 +3420,13 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
                 });
             } else {
                 result = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: {
-        emailRedirectTo: 'https://giupe-lab.github.io/indexhtml/'
-    }
-});
+                    email,
+                    password,
+                    options: {
+                        data: { full_name: displayName },
+                        emailRedirectTo: 'https://giupe-lab.github.io/indexhtml/'
+                    }
+                });
             }
 
             if (result.error) {
