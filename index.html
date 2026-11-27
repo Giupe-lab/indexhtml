@@ -349,11 +349,11 @@
 
             <!-- Menu Inferiore Sidebar -->
             <div class="p-3 mt-auto shrink-0 border-t border-navy-600/60 space-y-1 text-sm font-medium">
-                <button onclick="showToast('Modulo richiesta funzionalità aperto')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-blue-400 hover:bg-navy-750 transition">
+                <button onclick="openFeatureModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-blue-400 hover:bg-navy-750 transition">
                     <i data-lucide="message-square-plus" class="w-4 h-4"></i>
                     <span>Request Feature</span>
                 </button>
-                <button onclick="showToast('Piano attuale: Pro Challenge Unlimited')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-amber-400 hover:bg-navy-750 transition">
+                <button onclick="openPricingModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-amber-400 hover:bg-navy-750 transition">
                     <i data-lucide="crown" class="w-4 h-4"></i>
                     <span>Pricing</span>
                 </button>
@@ -1315,6 +1315,20 @@
             </button>
         </div>
 
+        <div class="mb-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs uppercase tracking-wider text-slate-500">Account</p>
+                    <p id="settings-account-email" class="mt-1 truncate text-sm font-medium text-white">Caricamento...</p>
+                </div>
+                <span class="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">Attivo</span>
+            </div>
+            <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+                <i data-lucide="cloud-check" class="h-4 w-4 text-emerald-400"></i>
+                <span id="settings-sync-status">Archivio cloud cifrato</span>
+            </div>
+        </div>
+
         <div class="mb-5">
             <label for="initial-capital-input" class="block text-sm font-semibold text-white mb-2">
                 Capitale iniziale
@@ -1351,6 +1365,76 @@
     </div>
 </div>
 
+
+    <!-- REQUEST FEATURE -->
+    <div id="feature-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-lg rounded-2xl border border-white/10 bg-navy-800 p-6 shadow-2xl fade-in">
+            <div class="mb-5 flex items-center justify-between border-b border-navy-600 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-white">Request Feature</h3>
+                    <p class="mt-1 text-xs text-slate-400">Annota un'idea per migliorare My PnL.</p>
+                </div>
+                <button onclick="closeFeatureModal()" class="text-slate-400 transition hover:text-white" aria-label="Chiudi">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+            <form id="feature-request-form" onsubmit="submitFeatureRequest(event)" class="space-y-4">
+                <div>
+                    <label for="feature-title" class="mb-2 block text-sm font-medium text-slate-200">Titolo della richiesta</label>
+                    <input id="feature-title" maxlength="90" required placeholder="Es. Aggiungere un filtro per strategia"
+                        class="w-full rounded-lg border border-navy-600 bg-[#05070F] px-3 py-3 text-sm text-white outline-none transition focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="feature-description" class="mb-2 block text-sm font-medium text-slate-200">Descrizione</label>
+                    <textarea id="feature-description" maxlength="1200" rows="4" required placeholder="Descrivi cosa vorresti e perché sarebbe utile..."
+                        class="w-full resize-y rounded-lg border border-navy-600 bg-[#05070F] px-3 py-3 text-sm text-white outline-none transition focus:border-blue-500"></textarea>
+                </div>
+                <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-500">
+                    <i data-lucide="plus" class="h-4 w-4"></i> Salva richiesta
+                </button>
+            </form>
+            <div class="mt-5 border-t border-navy-600 pt-4">
+                <div class="mb-3 flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-white">Le tue idee</h4>
+                    <span id="feature-request-count" class="text-xs text-slate-500">0 richieste</span>
+                </div>
+                <div id="feature-request-list" class="max-h-48 space-y-2 overflow-y-auto">
+                    <p class="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs text-slate-500">Non hai ancora salvato richieste.</p>
+                </div>
+                <p class="mt-3 text-[11px] leading-relaxed text-slate-500">Le richieste vengono conservate in questo browser e non sono inviate automaticamente.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRICING -->
+    <div id="pricing-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-2xl border border-white/10 bg-navy-800 p-6 shadow-2xl fade-in">
+            <div class="mb-5 flex items-center justify-between border-b border-navy-600 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-white">Pricing</h3>
+                    <p class="mt-1 text-xs text-slate-400">Piani e accesso a My PnL</p>
+                </div>
+                <button onclick="closePricingModal()" class="text-slate-400 transition hover:text-white" aria-label="Chiudi">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+            <div class="rounded-xl border border-blue-400/25 bg-blue-500/[0.07] p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-semibold text-white">Personal</span>
+                    <span class="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">In uso</span>
+                </div>
+                <p class="mt-3 text-3xl font-bold tracking-tight text-white">Gratis</p>
+                <p class="mt-1 text-xs text-slate-400">Accesso personale, senza abbonamento.</p>
+                <ul class="mt-5 space-y-2.5 text-sm text-slate-300">
+                    <li class="flex items-center gap-2"><i data-lucide="check" class="h-4 w-4 text-emerald-400"></i> Trading journal e calendario</li>
+                    <li class="flex items-center gap-2"><i data-lucide="check" class="h-4 w-4 text-emerald-400"></i> Statistiche e analisi</li>
+                    <li class="flex items-center gap-2"><i data-lucide="check" class="h-4 w-4 text-emerald-400"></i> Archivio cloud cifrato</li>
+                </ul>
+            </div>
+            <p class="mt-4 text-xs leading-relaxed text-slate-400">My PnL è attualmente utilizzato in modalità personale. Non ci sono pagamenti, rinnovi o piani commerciali attivi.</p>
+            <button onclick="closePricingModal()" class="mt-5 w-full rounded-lg border border-navy-600 bg-navy-750 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-navy-700">Chiudi</button>
+        </div>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-navy-750 border border-blue-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2 opacity-0 pointer-events-none transition-opacity duration-300 z-50">
@@ -3188,6 +3272,119 @@ function renderBacktesting() {
         }
 
        
+function getFeatureRequestsKey() {
+    return 'mypnl_feature_requests_' + (currentUserId || 'guest');
+}
+
+function openFeatureModal() {
+    renderFeatureRequests();
+    const modal = document.getElementById('feature-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    lucide.createIcons();
+}
+
+function closeFeatureModal() {
+    const modal = document.getElementById('feature-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function renderFeatureRequests() {
+    const list = document.getElementById('feature-request-list');
+    const count = document.getElementById('feature-request-count');
+    if (!list || !count) return;
+    let requests = [];
+    try {
+        requests = JSON.parse(localStorage.getItem(getFeatureRequestsKey()) || '[]');
+        if (!Array.isArray(requests)) requests = [];
+    } catch (error) {
+        requests = [];
+    }
+    count.textContent = requests.length + (requests.length === 1 ? ' richiesta' : ' richieste');
+    list.replaceChildren();
+    if (!requests.length) {
+        const empty = document.createElement('p');
+        empty.className = 'rounded-lg border border-white/5 bg-white/[0.02] p-3 text-xs text-slate-500';
+        empty.textContent = 'Non hai ancora salvato richieste.';
+        list.appendChild(empty);
+        return;
+    }
+    requests.slice().reverse().forEach(request => {
+        const card = document.createElement('div');
+        card.className = 'flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3';
+        const content = document.createElement('div');
+        content.className = 'min-w-0';
+        const title = document.createElement('p');
+        title.className = 'break-words text-xs font-semibold text-slate-100';
+        title.textContent = request.title || 'Richiesta senza titolo';
+        const description = document.createElement('p');
+        description.className = 'mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-slate-400';
+        description.textContent = request.description || '';
+        const date = document.createElement('p');
+        date.className = 'mt-2 text-[10px] text-slate-500';
+        date.textContent = request.createdAt ? new Date(request.createdAt).toLocaleDateString('it-IT') : '';
+        content.append(title, description, date);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300';
+        remove.setAttribute('aria-label', 'Elimina richiesta');
+        remove.innerHTML = '<i data-lucide="trash-2" class="h-4 w-4"></i>';
+        remove.addEventListener('click', () => deleteFeatureRequest(request.id));
+        card.append(content, remove);
+        list.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+function submitFeatureRequest(event) {
+    event.preventDefault();
+    const title = document.getElementById('feature-title').value.trim();
+    const description = document.getElementById('feature-description').value.trim();
+    if (!title || !description) {
+        showToast('Inserisci titolo e descrizione');
+        return;
+    }
+    let requests = [];
+    try {
+        requests = JSON.parse(localStorage.getItem(getFeatureRequestsKey()) || '[]');
+        if (!Array.isArray(requests)) requests = [];
+    } catch (error) {
+        requests = [];
+    }
+    requests.push({ id: Date.now(), title, description, createdAt: new Date().toISOString() });
+    localStorage.setItem(getFeatureRequestsKey(), JSON.stringify(requests));
+    document.getElementById('feature-request-form').reset();
+    renderFeatureRequests();
+    showToast('Richiesta salvata su questo dispositivo');
+}
+
+function deleteFeatureRequest(id) {
+    let requests = [];
+    try {
+        requests = JSON.parse(localStorage.getItem(getFeatureRequestsKey()) || '[]');
+        if (!Array.isArray(requests)) requests = [];
+    } catch (error) {
+        requests = [];
+    }
+    localStorage.setItem(getFeatureRequestsKey(), JSON.stringify(requests.filter(item => item.id !== id)));
+    renderFeatureRequests();
+    showToast('Richiesta eliminata');
+}
+
+function openPricingModal() {
+    const modal = document.getElementById('pricing-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    lucide.createIcons();
+}
+
+function closePricingModal() {
+    const modal = document.getElementById('pricing-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
 async function openSettingsModal() {
     const modal = document.getElementById('settings-modal');
     const input = document.getElementById('initial-capital-input');
@@ -3201,6 +3398,10 @@ async function openSettingsModal() {
 
     const storageKey = 'mypnl_initial_capital_' + data.user.id;
     input.value = localStorage.getItem(storageKey) || '';
+    const emailLabel = document.getElementById('settings-account-email');
+    if (emailLabel) emailLabel.textContent = data.user.email || 'Email non disponibile';
+    const syncStatus = document.getElementById('settings-sync-status');
+    if (syncStatus) syncStatus.textContent = currentEncryptionKey ? 'Archivio cloud cifrato e sincronizzato' : 'Archivio cloud non disponibile';
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -3255,6 +3456,7 @@ function closeSettingsModal() {
         }
 
         function clearAllTrades() {
+            if (!window.confirm('Vuoi davvero eliminare tutti i trade? Questa operazione non può essere annullata.')) return;
             trades = [];
             saveTrades();
             closeSettingsModal();
