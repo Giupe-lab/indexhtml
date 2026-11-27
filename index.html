@@ -115,7 +115,7 @@
         #view-insights .rounded-2xl, #view-insights .rounded-xl,
         #view-diary .rounded-2xl, #view-diary .rounded-xl,
         #view-playbooks .rounded-2xl, #view-playbooks .rounded-xl,
-        #view-watchlist .rounded-2xl, #view-watchlist .rounded-xl,
+        #view-watchlist .rounded-2xl, #view-watchlist .rounded-xl, #view-economic-calendar .rounded-2xl, #view-economic-calendar .rounded-xl,
         #view-backtesting .rounded-2xl, #view-backtesting .rounded-xl {
             position: relative;
             isolation: isolate;
@@ -137,7 +137,7 @@
         #view-insights .rounded-2xl:hover, #view-insights .rounded-xl:hover,
         #view-diary .rounded-2xl:hover, #view-diary .rounded-xl:hover,
         #view-playbooks .rounded-2xl:hover, #view-playbooks .rounded-xl:hover,
-        #view-watchlist .rounded-2xl:hover, #view-watchlist .rounded-xl:hover,
+        #view-watchlist .rounded-2xl:hover, #view-watchlist .rounded-xl:hover, #view-economic-calendar .rounded-2xl:hover, #view-economic-calendar .rounded-xl:hover,
         #view-backtesting .rounded-2xl:hover, #view-backtesting .rounded-xl:hover {
             border-color: rgba(220,235,255,.25);
             box-shadow: inset 0 1px 0 rgba(255,255,255,.19), 0 16px 38px rgba(0,0,0,.24);
@@ -383,9 +383,9 @@
                         <i data-lucide="target" class="w-4 h-4"></i>
                         <span>Playbooks</span>
                     </button>
-                    <button onclick="switchView('watchlist')" data-nav="watchlist" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
-                        <i data-lucide="trending-up" class="w-4 h-4"></i>
-                        <span>Watchlist</span>
+                    <button onclick="switchView('economic-calendar')" data-nav="economic-calendar" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                        <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+                        <span>Calendario Economico</span>
                     </button>
                     <button onclick="switchView('backtesting')" data-nav="backtesting" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
                         <i data-lucide="rewind" class="w-4 h-4"></i>
@@ -1372,6 +1372,62 @@
                         <p class="text-xs text-slate-500 mt-3">Non inserire qui dati personali o credenziali: questa sezione è informativa.</p>
                     </section>
                     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500"><span>My PnL · Centro assistenza</span><button onclick="switchView('calendar')" class="rounded-lg border border-navy-600 px-4 py-2 text-slate-300 hover:bg-navy-750">Torna al calendario</button></div>
+                </section>
+
+                <!-- CALENDARIO ECONOMICO: eventi reali da ShowMyTrades -->
+                <section id="view-economic-calendar" class="hidden fade-in space-y-5">
+                    <div class="rounded-2xl border border-navy-600 bg-navy-800/70 p-5 sm:p-6">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                            <div>
+                                <div class="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-blue-300">
+                                    <i data-lucide="radio-tower" class="h-4 w-4"></i> Market events · Live schedule
+                                </div>
+                                <h2 class="text-xl sm:text-2xl font-bold text-white">Calendario Economico</h2>
+                                <p class="mt-1 max-w-2xl text-sm text-slate-400">Pubblicazioni macroeconomiche, decisioni delle banche centrali e interventi ufficiali. Orari convertiti automaticamente nel fuso locale del dispositivo.</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span id="economic-last-update" class="text-[11px] text-slate-500">Aggiornamento non ancora eseguito</span>
+                                <button id="economic-refresh" type="button" onclick="loadEconomicCalendar(true)" class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[.04] px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/[.08]">
+                                    <i data-lucide="refresh-cw" class="h-4 w-4"></i> Aggiorna
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div class="rounded-xl border border-white/10 bg-white/[.025] p-3">
+                                <p class="text-[11px] text-slate-500">Eventi nel periodo</p><p id="economic-total" class="mt-1 text-2xl font-bold tabular-nums text-white">—</p>
+                            </div>
+                            <div class="rounded-xl border border-rose-400/15 bg-rose-400/[.04] p-3">
+                                <p class="text-[11px] text-slate-500">Alto impatto</p><p id="economic-high" class="mt-1 text-2xl font-bold tabular-nums text-rose-300">—</p>
+                            </div>
+                            <div class="rounded-xl border border-emerald-400/15 bg-emerald-400/[.035] p-3">
+                                <p class="text-[11px] text-slate-500">Prossimo evento</p><p id="economic-next" class="mt-1 truncate text-sm font-semibold text-emerald-300">—</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-navy-600 bg-navy-800/60 p-4">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                            <div class="flex flex-wrap gap-2">
+                                <div><label for="economic-days" class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Periodo</label>
+                                    <select id="economic-days" onchange="renderEconomicCalendar()" class="rounded-lg border border-white/10 bg-[#111827] px-3 py-2 text-xs text-white"><option value="1">Oggi / prossime 24h</option><option value="7" selected>7 giorni</option><option value="30">30 giorni</option></select>
+                                </div>
+                                <div><label for="economic-currency" class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Valuta</label>
+                                    <select id="economic-currency" onchange="renderEconomicCalendar()" class="rounded-lg border border-white/10 bg-[#111827] px-3 py-2 text-xs text-white"><option value="ALL">Tutte</option><option>USD</option><option>EUR</option><option>GBP</option><option>JPY</option><option>CHF</option><option>CAD</option><option>AUD</option><option>NZD</option><option>CNY</option></select>
+                                </div>
+                                <div><label for="economic-impact" class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Impatto</label>
+                                    <select id="economic-impact" onchange="renderEconomicCalendar()" class="rounded-lg border border-white/10 bg-[#111827] px-3 py-2 text-xs text-white"><option value="all">Tutti</option><option value="high">Alto</option><option value="medium">Medio</option><option value="low">Basso</option><option value="holiday">Festività</option></select>
+                                </div>
+                            </div>
+                            <p id="economic-results-label" class="text-xs text-slate-500">Caricamento eventi…</p>
+                        </div>
+                    </div>
+                    <div id="economic-calendar-message" class="hidden rounded-xl border border-white/10 bg-white/[.03] p-5 text-sm text-slate-300"></div>
+                    <div id="economic-calendar-list" class="space-y-3" aria-live="polite">
+                        <div class="rounded-xl border border-white/10 bg-white/[.025] p-6 text-center text-sm text-slate-400">Caricamento del calendario economico…</div>
+                    </div>
+                    <div class="flex flex-col gap-1 border-t border-white/10 pt-4 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                        <span>Fonte dati: <a href="https://showmytrades.com/tools/economic-calendar" target="_blank" rel="noopener noreferrer" class="text-blue-300 hover:text-blue-200 underline">Economic calendar by ShowMyTrades</a>.</span>
+                        <span>Eventi e valori dipendono dalle fonti pubbliche e possono essere aggiornati o riprogrammati.</span>
+                    </div>
                 </section>
 
                 <!-- ========================================================= -->
@@ -3230,9 +3286,120 @@ function renderBacktesting() {
     }
 }
 
+        // Calendario economico: feed pubblico reale ShowMyTrades (aggiornato lato fonte ogni 15 minuti).
+        let economicEvents = [];
+        let economicFetchedAt = 0;
+        let economicFetchInFlight = false;
+        const ECONOMIC_CALENDAR_URL = 'https://showmytrades.com/api/public/calendar/v1?impact=all&days=30';
+
+        function economicEscape(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+        }
+
+        function economicDate(ts) {
+            return new Date(Number(ts) * 1000);
+        }
+
+        function economicImpactLabel(level) {
+            return ({high:'Alto impatto',medium:'Impatto medio',low:'Basso impatto',holiday:'Festività mercato'})[level] || 'Impatto n/d';
+        }
+
+        function economicImpactClass(level) {
+            return ({high:'border-rose-400/25 bg-rose-400/10 text-rose-300',medium:'border-amber-400/25 bg-amber-400/10 text-amber-300',low:'border-sky-400/20 bg-sky-400/10 text-sky-300',holiday:'border-slate-400/20 bg-slate-400/10 text-slate-300'})[level] || 'border-white/10 bg-white/5 text-slate-400';
+        }
+
+        async function loadEconomicCalendar(force = false) {
+            if (economicFetchInFlight) return;
+            if (!force && economicEvents.length && Date.now() - economicFetchedAt < 15 * 60 * 1000) {
+                renderEconomicCalendar();
+                return;
+            }
+            economicFetchInFlight = true;
+            const button = document.getElementById('economic-refresh');
+            const list = document.getElementById('economic-calendar-list');
+            const message = document.getElementById('economic-calendar-message');
+            if (button) button.disabled = true;
+            if (list && !economicEvents.length) list.innerHTML = '<div class="rounded-xl border border-white/10 bg-white/[.025] p-6 text-center text-sm text-slate-400">Connessione alla fonte degli eventi economici…</div>';
+            if (message) message.classList.add('hidden');
+            try {
+                const response = await fetch(ECONOMIC_CALENDAR_URL, {method:'GET', headers:{'Accept':'application/json'}, cache:'no-store'});
+                if (!response.ok) throw new Error('La fonte ha risposto con errore HTTP ' + response.status);
+                const payload = await response.json();
+                if (!payload || !Array.isArray(payload.events)) throw new Error('Formato dati ricevuto non riconosciuto.');
+                economicEvents = payload.events.filter(event => event && Number.isFinite(Number(event.ts)) && event.title);
+                economicFetchedAt = Date.now();
+                const stamp = document.getElementById('economic-last-update');
+                if (stamp) stamp.textContent = 'Fonte aggiornata: ' + new Date(Number(payload.server_time || Math.floor(Date.now()/1000))*1000).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+                renderEconomicCalendar();
+            } catch (error) {
+                console.error('Calendario economico:', error);
+                if (message) {
+                    message.classList.remove('hidden');
+                    message.innerHTML = '<div class="flex items-start gap-3"><i data-lucide="alert-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-300"></i><div><p class="font-semibold text-white">Calendario temporaneamente non raggiungibile</p><p class="mt-1 text-slate-400">' + economicEscape(error.message || 'Errore di connessione') + '</p><p class="mt-2 text-xs text-slate-500">Non mostriamo dati dimostrativi: riprova tra poco. Se il browser blocca la richiesta alla fonte, servirà un piccolo proxy server-side.</p></div></div>';
+                    lucide.createIcons();
+                }
+                if (!economicEvents.length && list) list.innerHTML = '';
+            } finally {
+                economicFetchInFlight = false;
+                if (button) button.disabled = false;
+            }
+        }
+
+        function renderEconomicCalendar() {
+            const daysControl = document.getElementById('economic-days');
+            const currencyControl = document.getElementById('economic-currency');
+            const impactControl = document.getElementById('economic-impact');
+            const list = document.getElementById('economic-calendar-list');
+            if (!daysControl || !currencyControl || !impactControl || !list) return;
+            const days = Number(daysControl.value || 7);
+            const currency = currencyControl.value;
+            const impact = impactControl.value;
+            const now = Date.now();
+            const end = now + days * 24 * 60 * 60 * 1000;
+            const filtered = economicEvents.filter(event => {
+                const time = Number(event.ts) * 1000;
+                return time >= now - 6 * 60 * 60 * 1000 && time <= end &&
+                    (currency === 'ALL' || event.currency === currency) &&
+                    (impact === 'all' || event.impact === impact);
+            }).sort((a,b) => Number(a.ts)-Number(b.ts));
+            const total = document.getElementById('economic-total');
+            const high = document.getElementById('economic-high');
+            const next = document.getElementById('economic-next');
+            const highCount = filtered.filter(event => event.impact === 'high').length;
+            if (total) total.textContent = String(filtered.length);
+            if (high) high.textContent = String(highCount);
+            const nextEvent = filtered.find(event => Number(event.ts)*1000 >= now);
+            if (next) next.textContent = nextEvent ? economicDate(nextEvent.ts).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'}) + ' · ' + nextEvent.currency + ' ' + nextEvent.title : 'Nessun evento imminente';
+            const resultLabel = document.getElementById('economic-results-label');
+            if (resultLabel) resultLabel.textContent = filtered.length + ' eventi · ' + days + (days === 1 ? ' giorno' : ' giorni');
+            if (!filtered.length) {
+                list.innerHTML = '<div class="rounded-xl border border-white/10 bg-white/[.025] p-8 text-center"><i data-lucide="calendar-check" class="mx-auto mb-3 h-7 w-7 text-slate-500"></i><p class="text-sm font-semibold text-slate-200">Nessun evento con questi filtri</p><p class="mt-1 text-xs text-slate-500">Prova ad ampliare il periodo o a cambiare valuta e impatto.</p></div>';
+                lucide.createIcons();
+                return;
+            }
+            const groups = new Map();
+            filtered.forEach(event => {
+                const date = economicDate(event.ts);
+                const key = date.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+                if (!groups.has(key)) groups.set(key,[]);
+                groups.get(key).push(event);
+            });
+            list.innerHTML = Array.from(groups.entries()).map(([date,events]) => {
+                const rows = events.map(event => {
+                    const d = economicDate(event.ts);
+                    const time = d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+                    const status = event.status === 'tentative' ? '<span class="ml-1 text-[10px] text-amber-300">Orario da confermare</span>' : event.status === 'moved' ? '<span class="ml-1 text-[10px] text-amber-300">Riprogrammato</span>' : '';
+                    const value = (label,val) => '<div class="min-w-0"><p class="text-[10px] uppercase tracking-wider text-slate-500">' + label + '</p><p class="mt-1 truncate text-xs font-semibold text-slate-200">' + (val ? economicEscape(val) : '<span class="font-normal text-slate-600">—</span>') + '</p></div>';
+                    return '<article class="grid grid-cols-1 gap-3 border-t border-white/[.07] px-4 py-4 sm:grid-cols-[76px_minmax(0,1fr)_repeat(3,minmax(78px,110px))] sm:items-center"><div class="flex items-center gap-2 sm:block"><span class="text-sm font-bold tabular-nums text-white">' + time + '</span><span class="rounded-md border border-white/10 bg-white/[.04] px-2 py-1 text-[10px] font-bold text-slate-300">' + economicEscape(event.currency || '—') + '</span></div><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-md border px-2 py-1 text-[10px] font-semibold ' + economicImpactClass(event.impact) + '">' + economicImpactLabel(event.impact) + '</span>' + status + '</div><h3 class="mt-2 break-words text-sm font-semibold text-white">' + economicEscape(event.title) + '</h3>' + (event.period ? '<p class="mt-1 text-[10px] text-slate-500">Periodo: ' + economicEscape(event.period) + '</p>' : '') + '</div>' + value('Previsione',event.forecast) + value('Precedente',event.previous) + value('Effettivo',event.actual) + '</article>';
+                }).join('');
+                return '<section class="overflow-hidden rounded-xl border border-white/10 bg-[#111827]/75"><header class="flex items-center justify-between bg-white/[.035] px-4 py-3"><h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">' + economicEscape(date) + '</h3><span class="text-[10px] text-slate-500">' + events.length + (events.length === 1 ? ' evento' : ' eventi') + '</span></header>' + rows + '</section>';
+            }).join('');
+            lucide.createIcons();
+        }
+
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
-            const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic', 'help'];
+            const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic', 'help', 'economic-calendar'];
             views.forEach(v => {
     const element = document.getElementById(`view-${v}`);
     if (element) element.classList.add('hidden');
@@ -3257,7 +3424,7 @@ function renderBacktesting() {
                 insights: ['Trading Insights', 'sparkles'],
                 diary: ['Trade Diary', 'file-text'],
                 playbooks: ['Playbooks', 'target'],
-                watchlist: ['Watchlist', 'trending-up'],
+                'economic-calendar': ['Calendario Economico', 'calendar-clock'],
                 backtesting: ['Backtesting', 'rewind'],
                 help: ['Privacy & Help', 'shield-check']
             };
@@ -3290,6 +3457,10 @@ function renderBacktesting() {
 
 } else if (viewName === 'help') {
     document.getElementById('view-help').classList.remove('hidden');
+
+} else if (viewName === 'economic-calendar') {
+    document.getElementById('view-economic-calendar').classList.remove('hidden');
+    loadEconomicCalendar();
 
 } else {
     document.getElementById('generic-view-title').textContent = titleText;
