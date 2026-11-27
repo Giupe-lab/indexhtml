@@ -111,6 +111,8 @@
         #view-dashboard .rounded-xl {
             box-shadow: 0 12px 34px rgba(0,0,0,.16);
             transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+            background-image: linear-gradient(128deg, rgba(255,255,255,.035) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,.012) 100%);
+            backdrop-filter: blur(2px);
         }
         #view-dashboard .rounded-2xl:hover,
         #view-dashboard .rounded-xl:hover {
@@ -295,7 +297,7 @@
             </div>
 
             <!-- Menu Inferiore Sidebar -->
-            <div class="p-3 border-t border-navy-600/60 space-y-1 text-sm font-medium">
+            <div class="p-3 mb-5 border-t border-navy-600/60 space-y-1 text-sm font-medium">
                 <button onclick="showToast('Modulo richiesta funzionalità aperto')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-blue-400 hover:bg-navy-750 transition">
                     <i data-lucide="message-square-plus" class="w-4 h-4"></i>
                     <span>Request Feature</span>
@@ -536,8 +538,8 @@
     <!-- DASHBOARD HEADER -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h2 class="text-xl font-bold text-white">Trading Overview</h2>
-            <p class="text-sm text-slate-400 mt-1">Il riepilogo delle tue performance di trading</p>
+            <h2 id="dashboard-greeting" class="text-xl sm:text-2xl font-bold tracking-tight text-white">Ciao!</h2>
+            <p class="text-sm text-slate-400 mt-1">Ecco il riepilogo delle tue performance di trading</p>
         </div>
         <div class="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
             <i data-lucide="activity" class="w-3.5 h-3.5 inline mr-1"></i>
@@ -1179,7 +1181,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Symbol / Asset</label>
-                        <input type="text" id="trade-symbol" placeholder="es. NQ, ES, XAUUSD, BTC" required value="NQ" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-blue-500">
+                        <input type="text" id="trade-symbol" name="trade-symbol-entry" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="es. NQ, ES, XAUUSD, BTC" required value="NQ" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
 
@@ -1862,17 +1864,19 @@ function loadTrades() {
         }
 function updateCapitalHeader() {
     const display = document.getElementById('capital-header-value');
-
     if (!display) return;
 
-    const capital = getAccountSize();
+    // Saldo attuale = capitale iniziale impostato + PnL netto di tutti i trade.
+    const initialCapital = getAccountSize();
+    const totalPnL = trades.reduce((sum, trade) => sum + (Number(trade.pnl) || 0), 0);
+    const currentCapital = initialCapital + totalPnL;
 
-    display.textContent = capital > 0
-        ? `$${capital.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        })}`
-        : '$0.00';
+    display.textContent = `$${currentCapital.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })}`;
+    display.classList.toggle('text-emerald-400', totalPnL >= 0);
+    display.classList.toggle('text-rose-400', totalPnL < 0);
 }
         // Aggiorna tutti i componenti UI
         function renderAll() {
@@ -2146,6 +2150,9 @@ function updateCapitalHeader() {
         }
 
         function renderDashboard() {
+            const greeting = document.getElementById('dashboard-greeting');
+            if (greeting) greeting.textContent = `Ciao ${currentUserDisplayName}`;
+
             const filtered = [...getFilteredTrades()].sort((a, b) => a.date.localeCompare(b.date));
             const totalPnL = filtered.reduce((s, t) => s + t.pnl, 0);
             const wins = filtered.filter(t => t.pnl > 0);
@@ -3198,6 +3205,7 @@ function closeSettingsModal() {
     window.location.reload();
 } 
         let currentUserId = null;
+        let currentUserDisplayName = 'Trader';
         let currentEncryptionKey = null;
 
 // AUTENTICAZIONE MY PNL
@@ -3314,6 +3322,18 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     }
 
     currentUserId = data.user.id;
+
+    // Usa il nome del profilo; in assenza, ricava un nome leggibile dall'email.
+    const userMetadata = data.user.user_metadata || {};
+    const profileName = userMetadata.full_name || userMetadata.name ||
+        userMetadata.first_name || userMetadata.display_name ||
+        (data.user.email || '').split('@')[0] || 'Trader';
+    const firstName = String(profileName).replace(/[._-]+/g, ' ').trim().split(/\s+/)[0];
+    currentUserDisplayName = firstName
+        ? firstName.charAt(0).toLocaleUpperCase('it-IT') + firstName.slice(1).toLocaleLowerCase('it-IT')
+        : 'Trader';
+    if (/^giupe$/i.test(currentUserDisplayName)) currentUserDisplayName = 'Giuseppe';
+
     // Mai riutilizzare in memoria i trade della sessione/account precedente.
     trades = [];
 
