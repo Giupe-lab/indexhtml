@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My PnL - Trading Journal & Calendar</title>
+    <title>My PnL — Professional Trading Journal & Performance Analytics</title>
+    <meta name="description" content="My PnL: trading journal professionale, calendario operativo, analisi delle performance ed equity curve.">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -94,6 +95,40 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* My PnL Premium UI */
+        :root { color-scheme: dark; }
+        body { background:
+            radial-gradient(900px 500px at 85% -10%, rgba(59,130,246,.13), transparent 60%),
+            radial-gradient(700px 420px at -15% 25%, rgba(16,185,129,.07), transparent 55%),
+            #0d1019; }
+        #view-dashboard > div,
+        #view-calendar > div,
+        #view-stats > div,
+        #view-journal > div { animation: fadeIn .24s ease-out both; }
+        #view-dashboard .rounded-2xl,
+        #view-dashboard .rounded-xl {
+            box-shadow: 0 12px 34px rgba(0,0,0,.16);
+            transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+        }
+        #view-dashboard .rounded-2xl:hover,
+        #view-dashboard .rounded-xl:hover {
+            border-color: rgba(148,163,184,.32);
+            box-shadow: 0 18px 42px rgba(0,0,0,.22);
+        }
+        #view-dashboard [id^="dash-"] {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -.035em;
+        }
+        button, select, input, textarea { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+            outline: 2px solid rgba(96,165,250,.9);
+            outline-offset: 2px;
+        }
+        @media (max-width: 640px) {
+            #view-dashboard .h-72 { height: 230px; }
+            #view-dashboard { gap: 1rem; }
         }
     </style>
 </head>
@@ -557,6 +592,33 @@
             <p class="text-[11px] text-slate-500 mt-2">Valore medio atteso per trade</p>
         </div>
 
+    </div>
+
+    <!-- ADVANCED RISK METRICS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-navy-800/90 border border-navy-600 rounded-2xl p-4">
+            <div class="text-xs font-medium text-slate-400 mb-2">Average winning trade</div>
+            <div id="dash-average-win" class="text-xl font-bold text-emerald-400">$0.00</div>
+            <p class="text-[11px] text-slate-500 mt-1">Media delle operazioni positive</p>
+        </div>
+        <div class="bg-navy-800/90 border border-navy-600 rounded-2xl p-4">
+            <div class="text-xs font-medium text-slate-400 mb-2">Average losing trade</div>
+            <div id="dash-average-loss" class="text-xl font-bold text-rose-400">$0.00</div>
+            <p class="text-[11px] text-slate-500 mt-1">Media delle operazioni negative</p>
+        </div>
+        <div class="bg-navy-800/90 border border-navy-600 rounded-2xl p-4">
+            <div class="text-xs font-medium text-slate-400 mb-2">Maximum drawdown</div>
+            <div id="dash-max-drawdown" class="text-xl font-bold text-amber-300">$0.00</div>
+            <p class="text-[11px] text-slate-500 mt-1">Peggior calo dal picco di equity</p>
+        </div>
+        <div class="bg-navy-800/90 border border-navy-600 rounded-2xl p-4">
+            <div class="text-xs font-medium text-slate-400 mb-2">Best / worst trade</div>
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span id="dash-best-trade" class="text-lg font-bold text-emerald-400">$0.00</span>
+                <span id="dash-worst-trade" class="text-lg font-bold text-rose-400">$0.00</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Migliore e peggiore risultato</p>
+        </div>
     </div>
 
     <!-- EQUITY CURVE -->
@@ -1429,11 +1491,13 @@ async function encryptMyPnLArchive(encryptionKey, recoveryCode) {
 
 
 
-async function saveEncryptedArchive() {
+async function saveEncryptedArchiveNow() {
     if (!currentUserId || !currentEncryptionKey) {
         throw new Error('Chiave di cifratura non disponibile.');
     }
 
+    // Lo snapshot viene creato quando il salvataggio entra in esecuzione,
+    // non quando viene accodato: così viene sempre scritto lo stato più recente.
     const archive = collectMyPnLData();
 
     const encryptedArchive = await MYPNL_CRYPTO.encrypt(
@@ -1457,6 +1521,19 @@ async function saveEncryptedArchive() {
     if (error) throw error;
 
     console.log('Archivio cifrato sincronizzato.');
+}
+
+// Un solo salvataggio cloud alla volta: evita che richieste concorrenti
+// completate in ordine diverso sovrascrivano l'ultima versione dei dati.
+let cloudSaveQueue = Promise.resolve();
+
+function saveEncryptedArchive() {
+    const operation = cloudSaveQueue
+        .catch(() => {})
+        .then(() => saveEncryptedArchiveNow());
+
+    cloudSaveQueue = operation;
+    return operation;
 }
 
        
@@ -1518,18 +1595,51 @@ async function initializeEncryptedCloud() {
         ['encrypt', 'decrypt']
     );
 
-    const storedArchive = JSON.parse(data.encrypted_data);
+    let storedArchive;
 
-    if (!storedArchive.encryptedArchive) {
-        throw new Error('Formato archivio non riconosciuto.');
+    try {
+        storedArchive = typeof data.encrypted_data === 'string'
+            ? JSON.parse(data.encrypted_data)
+            : data.encrypted_data;
+    } catch (error) {
+        throw new Error('L’archivio cloud non contiene JSON valido. I dati remoti sono stati lasciati intatti.');
     }
 
-    const archive = await MYPNL_CRYPTO.decrypt(
-        storedArchive.encryptedArchive,
-        currentEncryptionKey
-    );
+    if (!storedArchive || !storedArchive.encryptedArchive) {
+        throw new Error('Formato archivio non riconosciuto. I dati remoti sono stati lasciati intatti.');
+    }
 
-    trades = Array.isArray(archive.trades) ? archive.trades : [];
+    let archive;
+    try {
+        archive = await MYPNL_CRYPTO.decrypt(
+            storedArchive.encryptedArchive,
+            currentEncryptionKey
+        );
+    } catch (error) {
+        console.error('Errore decifratura archivio My PnL:', error);
+        throw new Error('La chiave è stata recuperata, ma non riesco a decifrare l’archivio. Nessun dato è stato sovrascritto.');
+    }
+
+    if (!archive || typeof archive !== 'object' || !Array.isArray(archive.trades)) {
+        throw new Error('Archivio decifrato ma struttura dei trade non valida. Nessun dato è stato sovrascritto.');
+    }
+
+    // Non sostituire mai uno storico locale presente con un archivio cloud
+    // vuoto inatteso: prima va verificata la compatibilità del formato.
+    const localTrades = (() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            return Array.isArray(saved) ? saved : [];
+        } catch {
+            return [];
+        }
+    })();
+
+    if (archive.trades.length === 0 && localTrades.length > 0) {
+        throw new Error('L’archivio cloud risulta vuoto ma questo dispositivo contiene trade. Recupero bloccato per proteggere lo storico.');
+    }
+
+    trades = archive.trades;
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
 
@@ -1999,6 +2109,21 @@ function updateCapitalHeader() {
             document.getElementById('dash-profit-factor').textContent = pf;
             document.getElementById('dash-winrate').textContent = `${wr}%`;
             document.getElementById('dash-expectancy').textContent = formatCurrency(exp, true);
+            const avgWin = wins.length ? grossWin / wins.length : 0;
+            const avgLoss = losses.length ? losses.reduce((sum, t) => sum + t.pnl, 0) / losses.length : 0;
+            let equity = 0, peak = 0, maxDrawdown = 0;
+            filtered.forEach(t => {
+                equity += Number(t.pnl) || 0;
+                peak = Math.max(peak, equity);
+                maxDrawdown = Math.max(maxDrawdown, peak - equity);
+            });
+            const bestTrade = filtered.length ? Math.max(...filtered.map(t => Number(t.pnl) || 0)) : 0;
+            const worstTrade = filtered.length ? Math.min(...filtered.map(t => Number(t.pnl) || 0)) : 0;
+            document.getElementById('dash-average-win').textContent = formatCurrency(avgWin, true);
+            document.getElementById('dash-average-loss').textContent = formatCurrency(avgLoss);
+            document.getElementById('dash-max-drawdown').textContent = formatCurrency(maxDrawdown);
+            document.getElementById('dash-best-trade').textContent = formatCurrency(bestTrade, true);
+            document.getElementById('dash-worst-trade').textContent = formatCurrency(worstTrade);
 
             const ctx = document.getElementById('equityChart');
             if (!ctx) return;
@@ -3144,7 +3269,16 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     try {
         await initializeEncryptedCloud();
     } catch (error) {
-        console.error('Sincronizzazione cloud non disponibile:', error);
+        // Non mostrare mai un archivio vuoto se il recupero cloud fallisce:
+        // lasciare i dati locali intatti e bloccare l'ingresso finché l'errore
+        // non viene risolto, evitando che l'utente sovrascriva l'archivio remoto.
+        currentEncryptionKey = null;
+        console.error('Errore recupero archivio My PnL:', error);
+        showAuthError(
+            'Non è stato possibile recuperare e verificare i tuoi dati cloud. ' +
+            'I dati non sono stati modificati. Riprova più tardi o contatta il supporto.'
+        );
+        return;
     }
 
     renderAll();
