@@ -3390,7 +3390,7 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     currentUserDisplayName = firstName
         ? firstName.charAt(0).toLocaleUpperCase('it-IT') + firstName.slice(1).toLocaleLowerCase('it-IT')
         : 'Trader';
-    if (/^giupe$/i.test(currentUserDisplayName)) currentUserDisplayName = 'Giuseppe';
+    if (/^(?:giupe|dattilogiuseppe10)$/i.test(currentUserDisplayName.replace(/\s+/g, ''))) currentUserDisplayName = 'Giuseppe';
 
     // Mai riutilizzare in memoria i trade della sessione/account precedente.
     trades = [];
