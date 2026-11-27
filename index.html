@@ -1628,7 +1628,7 @@ async function initializeEncryptedCloud() {
     // vuoto inatteso: prima va verificata la compatibilità del formato.
     const localTrades = (() => {
         try {
-            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const saved = JSON.parse(localStorage.getItem(getTradesStorageKey()) || '[]');
             return Array.isArray(saved) ? saved : [];
         } catch {
             return [];
@@ -1641,7 +1641,7 @@ async function initializeEncryptedCloud() {
 
     trades = archive.trades;
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+    localStorage.setItem(getTradesStorageKey(), JSON.stringify(trades));
 
     localStorage.setItem(
         'mypnl_initial_capital_' + currentUserId,
@@ -1650,7 +1650,7 @@ async function initializeEncryptedCloud() {
 
     if (archive.backtest) {
         localStorage.setItem(
-            'mypnl_backtest_v1',
+            'mypnl_backtest_v1_' + currentUserId,
             JSON.stringify(archive.backtest)
         );
     }
@@ -1750,9 +1750,13 @@ const WEEK_ORDINALS = [
         }
 
         // Inizializzazione dati da LocalStorage
-      function loadTrades() {
+      function getTradesStorageKey() {
+    return currentUserId ? `${STORAGE_KEY}_${currentUserId}` : STORAGE_KEY;
+}
+
+function loadTrades() {
     try {
-        const savedTrades = localStorage.getItem(STORAGE_KEY);
+        const savedTrades = localStorage.getItem(getTradesStorageKey());
         trades = savedTrades ? JSON.parse(savedTrades) : [];
 
         if (!Array.isArray(trades)) {
@@ -1765,7 +1769,7 @@ const WEEK_ORDINALS = [
 }
 
         function saveTrades() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+    localStorage.setItem(getTradesStorageKey(), JSON.stringify(trades));
 
    if (currentUserId && currentEncryptionKey) {
         saveEncryptedArchive().catch(error => {
@@ -2585,7 +2589,7 @@ let backtestChartInstance = null;
 
 function getBacktestData() {
     try {
-        return JSON.parse(localStorage.getItem('mypnl_backtest_v1')) || {
+        return JSON.parse(localStorage.getItem('mypnl_backtest_v1_' + currentUserId)) || {
             strategies: [],
             trades: []
         };
@@ -2595,7 +2599,7 @@ function getBacktestData() {
 }
 
 function saveBacktestData(data) {
-    localStorage.setItem('mypnl_backtest_v1', JSON.stringify(data));
+    localStorage.setItem('mypnl_backtest_v1_' + currentUserId, JSON.stringify(data));
 
     if (currentUserId && currentEncryptionKey) {
         saveEncryptedArchive().catch(error => {
@@ -3263,8 +3267,8 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     }
 
     currentUserId = data.user.id;
-
-    loadTrades();
+    // Mai riutilizzare in memoria i trade della sessione/account precedente.
+    trades = [];
 
     try {
         await initializeEncryptedCloud();
