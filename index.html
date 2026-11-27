@@ -1351,6 +1351,10 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Number of Trades</label>
+                        <input type="number" id="trade-count" min="1" step="1" inputmode="numeric" placeholder="Enter quantity" required class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
                         <label class="block text-xs font-medium text-slate-400 mb-1">Direction</label>
                         <select id="trade-direction" class="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
                             <option value="LONG">LONG (Buy)</option>
@@ -2209,9 +2213,10 @@ function updateCapitalHeader() {
             // Calcolo KPI Mensili
             const totalPnL = monthTrades.reduce((sum, t) => sum + t.pnl, 0);
             const pnlPct = accSize > 0 ? (totalPnL / accSize) * 100 : 0;
-            const tradeCount = monthTrades.length;
+            const tradeCount = monthTrades.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0);
+            const recordCount = monthTrades.length;
             const winCount = monthTrades.filter(t => t.pnl > 0).length;
-            const winRate = tradeCount > 0 ? Math.round((winCount / tradeCount) * 100) : 0;
+            const winRate = recordCount > 0 ? Math.round((winCount / recordCount) * 100) : 0;
 
             const kpiPnlEl = document.getElementById('kpi-pnl');
             kpiPnlEl.textContent = formatCurrency(totalPnL);
@@ -2258,6 +2263,7 @@ function updateCapitalHeader() {
                     gridEl.appendChild(emptyCell);
                 } else {
                     const dayTrades = tradesByDay[dayNumber] || [];
+                    const dayTradeCount = dayTrades.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0);
                     const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
                     const dayPct = accSize > 0 ? (dayPnL / accSize) * 100 : 0;
                     
@@ -2286,7 +2292,7 @@ function updateCapitalHeader() {
                             <div class="text-xs font-semibold text-slate-200 text-center">${dayNumber}</div>
                             <div class="text-right">
                                 <div class="text-xs sm:text-sm font-bold ${pnlColor} leading-tight">${formatCurrency(dayPnL)}</div>
-                                <div class="text-[10px] text-slate-400 mt-0.5">${dayTrades.length} trades | ${dayPct.toFixed(1)}%</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">${dayTradeCount} trades | ${dayPct.toFixed(1)}%</div>
                             </div>
                         `;
                     } else {
@@ -2316,7 +2322,7 @@ function updateCapitalHeader() {
 
             weeksData.forEach((w, idx) => {
                 const wPnL = w.pnl;
-                const wCount = w.trades.length;
+                const wCount = w.trades.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0);
                 const wPct = (wPnL / accSize) * 100;
                 const pnlColor = wPnL > 0 ? 'text-profit-text' : (wPnL < 0 ? 'text-loss-text' : 'text-slate-300');
 
@@ -2365,6 +2371,7 @@ function updateCapitalHeader() {
                     return y === currentYear && (m - 1) === mIdx;
                 });
                 const mPnL = mTrades.reduce((s, t) => s + t.pnl, 0);
+                const mTradeCount = mTrades.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0);
                 const mPct = accSize > 0 ? (mPnL / accSize) * 100 : 0;
                  const isActive = mIdx === currentMonth;
 
@@ -2385,7 +2392,7 @@ function updateCapitalHeader() {
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-3">
                         <span class="font-bold text-sm text-white">${mName} ${currentYear}</span>
-                        <span class="text-xs text-slate-400">${mTrades.length} trades</span>
+                        <span class="text-xs text-slate-400">${mTradeCount} trades</span>
                     </div>
                     <div class="text-xl font-bold ${textClass}">${formatCurrency(mPnL)}</div>
                     <div class="text-xs text-slate-400 mt-1">Return: ${mPct.toFixed(2)}%</div>
@@ -2550,7 +2557,7 @@ function updateCapitalHeader() {
         if (element) element.textContent = value;
     };
 
-    setText('stats-total-trades', filtered.length);
+    setText('stats-total-trades', filtered.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0));
     setText('stats-winrate', `${winRate.toFixed(1)}%`);
     setText('stats-average-win', formatCurrency(averageWin));
     setText('stats-average-loss', formatCurrency(-averageLoss));
@@ -3273,6 +3280,7 @@ function renderBacktesting() {
             symbolInput.value = '';
             symbolInput.setAttribute('readonly', 'readonly');
             document.getElementById('trade-pnl').value = '';
+            document.getElementById('trade-count').value = '';
             document.getElementById('trade-notes').value = '';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -3290,10 +3298,14 @@ function renderBacktesting() {
             const symbolVal = document.getElementById('trade-symbol').value.trim().toUpperCase();
             const dirVal = document.getElementById('trade-direction').value;
             const pnlVal = parseFloat(document.getElementById('trade-pnl').value);
+            const tradeCountVal = Number(document.getElementById('trade-count').value);
             const accVal = document.getElementById('trade-account').value;
             const notesVal = document.getElementById('trade-notes').value.trim();
 
-            if (!dateVal || isNaN(pnlVal)) return;
+            if (!dateVal || isNaN(pnlVal) || !Number.isInteger(tradeCountVal) || tradeCountVal < 1) {
+                showToast('Inserisci un numero di trade valido (almeno 1).');
+                return;
+            }
 
             const newTrade = {
                 id: Date.now(),
@@ -3301,6 +3313,7 @@ function renderBacktesting() {
                 symbol: symbolVal || 'NQ',
                 direction: dirVal,
                 pnl: pnlVal,
+                trade_count: tradeCountVal,
                 account: accVal,
                 notes: notesVal
             };
@@ -3325,9 +3338,10 @@ function renderBacktesting() {
             const modal = document.getElementById('day-modal');
             const filtered = getFilteredTrades().filter(t => t.date === dateISO);
             const dayPnL = filtered.reduce((s, t) => s + t.pnl, 0);
+            const dayTradeCount = filtered.reduce((sum, t) => sum + (Number.isInteger(Number(t.trade_count)) && Number(t.trade_count) > 0 ? Number(t.trade_count) : 1), 0);
 
             document.getElementById('day-modal-title').textContent = `${MONTH_NAMES[currentMonth]} ${dayNumber}, ${currentYear}`;
-            document.getElementById('day-modal-subtitle').textContent = `${filtered.length} trades | Net PnL: ${formatCurrency(dayPnL, true)}`;
+            document.getElementById('day-modal-subtitle').textContent = `${dayTradeCount} trades | Net PnL: ${formatCurrency(dayPnL, true)}`;
 
             const listEl = document.getElementById('day-trades-list');
             listEl.innerHTML = '';
