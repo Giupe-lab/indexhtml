@@ -173,6 +173,53 @@
             #view-dashboard { gap: 1rem; }
         }
     </style>
+<style>
+/* Calendar — slightly stronger glass reflection */
+#calendar-days-grid>div,
+#yearly-calendar-container>div,
+#weekly-summary-cards>div{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -1px 0 rgba(255,255,255,.025),0 5px 16px rgba(0,0,0,.13);
+  backdrop-filter:blur(9px) saturate(1.12);
+  -webkit-backdrop-filter:blur(9px) saturate(1.12);
+}
+#calendar-days-grid>div::before,
+#yearly-calendar-container>div::before,
+#weekly-summary-cards>div::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:58%;
+  pointer-events:none;
+  border-radius:inherit;
+  background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.035) 34%,transparent 76%);
+  opacity:.9;
+  z-index:0;
+}
+#calendar-days-grid>div::after,
+#yearly-calendar-container>div::after,
+#weekly-summary-cards>div::after{
+  content:"";
+  position:absolute;
+  left:9%;
+  right:9%;
+  top:1px;
+  height:1px;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
+  opacity:.8;
+}
+#calendar-days-grid>div>*,
+#yearly-calendar-container>div>*,
+#weekly-summary-cards>div>*{position:relative;z-index:1}
+#calendar-days-grid>div:hover,
+#yearly-calendar-container>div:hover,
+#weekly-summary-cards>div:hover{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 20px rgba(0,0,0,.2);
+}
+</style>
 </head>
 <body class="bg-navy-900 text-slate-200 antialiased selection:bg-blue-500 selection:text-white">
 
