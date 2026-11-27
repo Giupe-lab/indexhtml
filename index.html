@@ -3144,7 +3144,16 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
     try {
         await initializeEncryptedCloud();
     } catch (error) {
-        console.error('Sincronizzazione cloud non disponibile:', error);
+        // Non mostrare mai un archivio vuoto se il recupero cloud fallisce:
+        // lasciare i dati locali intatti e bloccare l'ingresso finché l'errore
+        // non viene risolto, evitando che l'utente sovrascriva l'archivio remoto.
+        currentEncryptionKey = null;
+        console.error('Errore recupero archivio My PnL:', error);
+        showAuthError(
+            'Non è stato possibile recuperare e verificare i tuoi dati cloud. ' +
+            'I dati non sono stati modificati. Riprova più tardi o contatta il supporto.'
+        );
+        return;
     }
 
     renderAll();
