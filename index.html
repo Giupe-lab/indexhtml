@@ -1871,7 +1871,7 @@ function updateCapitalHeader() {
     const totalPnL = trades.reduce((sum, trade) => sum + (Number(trade.pnl) || 0), 0);
     const currentCapital = initialCapital + totalPnL;
 
-    display.textContent = `${currentCapital.toLocaleString('en-US', {
+    display.textContent = `$${currentCapital.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     })}`;
