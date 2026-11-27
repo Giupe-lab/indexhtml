@@ -408,6 +408,10 @@
                     <i data-lucide="settings" class="w-4 h-4"></i>
                     <span>Settings</span>
                 </button>
+                <button onclick="switchView('help')" data-nav="help" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-navy-750 transition">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Privacy & Help</span>
+                </button>
                 <button onclick="signOutUser()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-750 transition">
     <i data-lucide="log-out" class="w-4 h-4"></i>
     <span>Sign Out</span>
@@ -1340,6 +1344,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- PRIVACY, SICUREZZA E CENTRO ASSISTENZA -->
+                <section id="view-help" class="hidden space-y-6 fade-in">
+                    <div class="rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent p-6 sm:p-8">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 shrink-0 rounded-xl bg-blue-500/15 border border-blue-300/20 flex items-center justify-center text-blue-300"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
+                            <div><p class="text-xs uppercase tracking-[.18em] text-blue-300 font-bold mb-2">MY PNL · SUPPORT CENTER</p><h2 class="text-2xl font-bold text-white tracking-tight">Privacy, sicurezza e assistenza</h2><p class="text-sm text-slate-400 mt-2 max-w-2xl">Le informazioni utili per usare My PnL, proteggere il tuo account e capire come vengono gestiti i tuoi dati.</p></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <article class="rounded-xl border border-navy-600 bg-navy-800/70 p-5"><div class="flex items-center gap-2 text-emerald-300 mb-3"><i data-lucide="lock-keyhole" class="w-5 h-5"></i><h3 class="font-semibold text-white">Protezione dei dati</h3></div><p class="text-sm text-slate-400 leading-relaxed">I dati del Tracker vengono sincronizzati con il servizio Supabase. L'archivio delle operazioni è gestito in forma cifrata dall'applicazione; le chiavi di cifratura sono trattate tramite una funzione server autenticata. L'accesso ai dati sincronizzati è progettato per essere associato all'account autenticato.</p></article>
+                        <article class="rounded-xl border border-navy-600 bg-navy-800/70 p-5"><div class="flex items-center gap-2 text-blue-300 mb-3"><i data-lucide="user-round-check" class="w-5 h-5"></i><h3 class="font-semibold text-white">Sicurezza dell'account</h3></div><p class="text-sm text-slate-400 leading-relaxed">Usa una password unica e non condividerla. Proteggi anche la casella email collegata all'account. Esci dal Tracker quando utilizzi un dispositivo condiviso e non inviare mai password o codici di accesso all'assistenza.</p></article>
+                        <article class="rounded-xl border border-navy-600 bg-navy-800/70 p-5"><div class="flex items-center gap-2 text-violet-300 mb-3"><i data-lucide="database" class="w-5 h-5"></i><h3 class="font-semibold text-white">Sincronizzazione e backup</h3></div><p class="text-sm text-slate-400 leading-relaxed">La sincronizzazione consente di mantenere i dati del Tracker associati al tuo account. La sincronizzazione non deve essere considerata, da sola, una garanzia di backup indipendente: conserva sempre una copia dei dati importanti.</p></article>
+                    </div>
+                    <section class="rounded-xl border border-navy-600 bg-navy-800/60 p-5 sm:p-6 space-y-3">
+                        <div class="flex items-center gap-2 mb-1"><i data-lucide="help-circle" class="w-5 h-5 text-blue-300"></i><h3 class="text-lg font-bold text-white">Domande frequenti</h3></div>
+                        <details class="group border-b border-navy-600/70 py-3"><summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold text-slate-200">Dove vengono salvati i miei trade?<i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i></summary><p class="text-sm text-slate-400 leading-relaxed mt-3">I dati vengono gestiti nell'applicazione e, quando la sincronizzazione è attiva, salvati nel backend Supabase associato al progetto My PnL. L'archivio delle operazioni sincronizzato è cifrato dall'applicazione.</p></details>
+                        <details class="group border-b border-navy-600/70 py-3"><summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold text-slate-200">Cosa succede se cambio dispositivo?<i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i></summary><p class="text-sm text-slate-400 leading-relaxed mt-3">Accedi con lo stesso account e verifica che la sincronizzazione sia attiva. Prima di cambiare dispositivo, assicurati che le modifiche recenti siano state sincronizzate.</p></details>
+                        <details class="group border-b border-navy-600/70 py-3"><summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold text-slate-200">Come proteggo il mio account?<i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i></summary><p class="text-sm text-slate-400 leading-relaxed mt-3">Utilizza una password robusta e unica, proteggi la tua email e non condividere i codici di verifica. Esci sempre dopo l'uso su dispositivi non personali.</p></details>
+                        <details class="group border-b border-navy-600/70 py-3"><summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold text-slate-200">Il Tracker fornisce consigli finanziari o esegue operazioni?<i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i></summary><p class="text-sm text-slate-400 leading-relaxed mt-3">My PnL è uno strumento di registrazione e analisi delle performance. Le statistiche e le simulazioni sono strumenti informativi, non costituiscono consulenza finanziaria né garanzia di risultati. Le decisioni operative restano responsabilità dell'utente.</p></details>
+                        <details class="group py-3"><summary class="cursor-pointer list-none flex items-center justify-between gap-3 text-sm font-semibold text-slate-200">Come posso chiedere assistenza o segnalare un problema?<i data-lucide="chevron-down" class="w-4 h-4 text-slate-500"></i></summary><p class="text-sm text-slate-400 leading-relaxed mt-3">Puoi utilizzare Request Feature nel menu inferiore per inviare una richiesta o una segnalazione. Non includere password, codici di accesso o dati finanziari riservati nella descrizione.</p></details>
+                    </section>
+                    <section class="rounded-xl border border-amber-400/20 bg-amber-400/5 p-5 sm:p-6">
+                        <div class="flex items-center gap-2 mb-2 text-amber-300"><i data-lucide="file-warning" class="w-5 h-5"></i><h3 class="font-bold text-white">Informativa privacy e termini legali</h3></div>
+                        <p class="text-sm text-slate-300 leading-relaxed">Questa pagina contiene informazioni generali sul funzionamento del Tracker e indicazioni di sicurezza. Non sostituisce ancora una Privacy Policy o Termini di Servizio completi. Prima della pubblicazione commerciale occorre indicare il titolare del trattamento, i contatti, le finalità e basi giuridiche, i tempi di conservazione, i destinatari/fornitori, i trasferimenti eventuali e le modalità per esercitare i diritti previsti dalla normativa applicabile.</p>
+                        <p class="text-xs text-slate-500 mt-3">Non inserire qui dati personali o credenziali: questa sezione è informativa.</p>
+                    </section>
+                    <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500"><span>My PnL · Centro assistenza</span><button onclick="switchView('calendar')" class="rounded-lg border border-navy-600 px-4 py-2 text-slate-300 hover:bg-navy-750">Torna al calendario</button></div>
+                </section>
 
                 <!-- ========================================================= -->
                 <!-- VISTA 4: ALTRE SEZIONI (STATS, INSIGHTS, PLAYBOOKS, ECC.) -->
@@ -3199,7 +3232,7 @@ function renderBacktesting() {
 
         // Navigazione tra viste sidebar
         window.switchView = function(viewName) {
-            const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic'];
+            const views = ['calendar', 'dashboard', 'stats', 'insights', 'backtesting', 'journal', 'generic', 'help'];
             views.forEach(v => {
     const element = document.getElementById(`view-${v}`);
     if (element) element.classList.add('hidden');
@@ -3225,7 +3258,8 @@ function renderBacktesting() {
                 diary: ['Trade Diary', 'file-text'],
                 playbooks: ['Playbooks', 'target'],
                 watchlist: ['Watchlist', 'trending-up'],
-                backtesting: ['Backtesting', 'rewind']
+                backtesting: ['Backtesting', 'rewind'],
+                help: ['Privacy & Help', 'shield-check']
             };
 
             const [titleText, iconName] = titles[viewName] || ['Calendar', 'calendar'];
@@ -3253,6 +3287,9 @@ function renderBacktesting() {
 
 } else if (viewName === 'journal') {
     document.getElementById('view-journal').classList.remove('hidden');
+
+} else if (viewName === 'help') {
+    document.getElementById('view-help').classList.remove('hidden');
 
 } else {
     document.getElementById('generic-view-title').textContent = titleText;
