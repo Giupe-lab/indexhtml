@@ -1665,6 +1665,41 @@ async function initializeEncryptedCloud() {
     }
 }
 
+        // All'accesso mostra subito il mese dell'ultimo trade salvato.
+        // Se non ci sono trade, usa il mese corrente.
+        function selectCalendarMonthForLatestTrade() {
+            const validDates = trades
+                .map(trade => trade.date)
+                .filter(date => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date))
+                .sort();
+
+            const dateToShow = validDates.length
+                ? validDates[validDates.length - 1]
+                : (() => {
+                    const now = new Date();
+                    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+                })();
+
+            const [year, month] = dateToShow.split('-').map(Number);
+            if (!Number.isInteger(year) || month < 1 || month > 12) return;
+
+            currentYear = year;
+            currentMonth = month - 1;
+
+            const yearSelect = document.getElementById('year-select');
+            const monthSelect = document.getElementById('month-select');
+
+            if (yearSelect && !Array.from(yearSelect.options).some(option => Number(option.value) === year)) {
+                const option = document.createElement('option');
+                option.value = String(year);
+                option.textContent = String(year);
+                yearSelect.appendChild(option);
+            }
+
+            if (yearSelect) yearSelect.value = String(currentYear);
+            if (monthSelect) monthSelect.value = String(currentMonth);
+        }
+
         // TEST CONNESSIONE SUPABASE
 supabaseClient.auth.getSession()
     .then(({ data, error }) => {
@@ -1797,7 +1832,10 @@ function loadTrades() {
     const dirFilter = directionSelect ? directionSelect.value : 'ALL';
 
     return trades.filter(t => {
-        if (selectedAccount && t.account !== selectedAccount) return false;
+        // "My Account" è il contenitore generale, non un valore presente
+        // nei trade (che usano nomi come "200K challenge" o "Personal Live").
+        // Non deve quindi nascondere lo storico al primo accesso.
+        if (selectedAccount && selectedAccount !== 'My Account' && t.account !== selectedAccount) return false;
 
         if (dirFilter === 'LONG') return t.direction === 'LONG';
         if (dirFilter === 'SHORT') return t.direction === 'SHORT';
@@ -3294,6 +3332,8 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
         return;
     }
 
+    // Allinea i controlli del calendario ai dati effettivamente recuperati dal cloud.
+    selectCalendarMonthForLatestTrade();
     renderAll();
 
     authScreen.classList.add('hidden');
