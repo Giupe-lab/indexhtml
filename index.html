@@ -151,7 +151,7 @@
 
             <div>
                 <label class="mb-2 block text-sm text-slate-300">Email</label>
-                <input id="auth-email" type="email" required autocomplete="email"
+                <input id="auth-email" type="email" name="mypnl-login-email" required autocomplete="off" autocapitalize="none" spellcheck="false"
                     class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-white outline-none focus:border-blue-500"
                     placeholder="nome@email.com">
             </div>
@@ -1315,7 +1315,16 @@
 
         const supabaseClient = window.supabase.createClient(
             SUPABASE_URL,
-            SUPABASE_PUBLISHABLE_KEY
+            SUPABASE_PUBLISHABLE_KEY,
+            {
+                auth: {
+                    // My PnL richiede un nuovo accesso quando la pagina viene riaperta.
+                    // Evita che il browser ripristini automaticamente l'account owner.
+                    persistSession: false,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            }
         );
 // =====================================
 // MY PNL - MOTORE DI CIFRATURA AES-256
@@ -3140,7 +3149,7 @@ function closeSettingsModal() {
         }
 
    async function signOutUser() {
-    const { error } = await supabaseClient.auth.signOut();
+    const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
 
     if (error) {
         showToast('Errore durante la disconnessione');
