@@ -3383,8 +3383,12 @@ signupOtpResend.addEventListener('click', async () => {
             email: pendingSignupEmail
         });
         if (error) throw error;
-        showSignupOtpError('Nuovo codice inviato. Controlla anche la cartella Spam.');
+        signupOtpError.textContent = 'Nuovo codice inviato. Controlla anche la cartella Spam.';
+        signupOtpError.classList.remove('hidden', 'text-red-400');
+        signupOtpError.classList.add('text-blue-300');
     } catch (error) {
+        signupOtpError.classList.remove('text-blue-300');
+        signupOtpError.classList.add('text-red-400');
         showSignupOtpError(error.message || 'Non è stato possibile inviare un nuovo codice. Riprova tra poco.');
     } finally {
         signupOtpResend.disabled = false;
