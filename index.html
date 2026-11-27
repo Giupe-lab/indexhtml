@@ -212,6 +212,10 @@
                     placeholder="Almeno 8 caratteri">
             </div>
 
+            <div class="flex justify-center" aria-label="Verifica di sicurezza">
+                <div id="mypnl-turnstile"></div>
+            </div>
+
             <p id="auth-error" class="hidden text-sm text-red-400"></p>
 
             <button id="auth-submit" type="submit"
@@ -1358,6 +1362,38 @@
     <!-- LOGICA APPLICATIVA JAVASCRIPT                             -->
     <!-- ========================================================= -->
     <script>
+        // CAPTCHA Cloudflare Turnstile per Supabase Auth
+        window.mypnlCaptchaToken = '';
+        window.mypnlTurnstileWidgetId = null;
+        window.onMyPnlTurnstileSuccess = (token) => { window.mypnlCaptchaToken = token; };
+        window.onMyPnlTurnstileExpired = () => { window.mypnlCaptchaToken = ''; };
+        window.onMyPnlTurnstileError = () => { window.mypnlCaptchaToken = ''; };
+        window.initMyPnlTurnstile = function () {
+            const mount = document.getElementById('mypnl-turnstile');
+            if (!mount || !window.turnstile || window.mypnlTurnstileWidgetId !== null) return;
+            window.mypnlTurnstileWidgetId = window.turnstile.render(mount, {
+                sitekey: '0x4AAAAAAGV8_0hakhf5nwq6',
+                callback: window.onMyPnlTurnstileSuccess,
+                'expired-callback': window.onMyPnlTurnstileExpired,
+                'error-callback': window.onMyPnlTurnstileError,
+                theme: 'dark'
+            });
+        };
+        window.addEventListener('DOMContentLoaded', () => window.initMyPnlTurnstile());
+        window.resetMyPnlTurnstile = function () {
+            window.mypnlCaptchaToken = '';
+            if (window.turnstile && window.mypnlTurnstileWidgetId !== null) {
+                window.turnstile.reset(window.mypnlTurnstileWidgetId);
+            }
+        };
+
+        // Carica Turnstile dopo aver definito la callback globale.
+        const turnstileScript = document.createElement('script');
+        turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=initMyPnlTurnstile&render=explicit';
+        turnstileScript.async = true;
+        turnstileScript.defer = true;
+        document.head.appendChild(turnstileScript);
+
         // COLLEGAMENTO SUPABASE
         const SUPABASE_URL = 'https://gquznadnquwbkmieaema.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_u6WNqQR_Uplb6PDh6anYTA_r_d9b_0A';
@@ -3434,6 +3470,13 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
         const password = authPassword.value;
         const displayName = authName.value.trim();
 
+        if (!window.mypnlCaptchaToken) {
+            showAuthError('Completa prima la verifica di sicurezza.');
+            authSubmit.disabled = false;
+            authSubmit.textContent = authMode === 'login' ? 'Accedi' : 'Registrati';
+            return;
+        }
+
         if (authMode === 'signup' && !displayName) {
             showAuthError('Inserisci il tuo nome per completare la registrazione.');
             authName.focus();
@@ -3448,7 +3491,8 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
             if (authMode === 'login') {
                 result = await supabaseClient.auth.signInWithPassword({
                     email,
-                    password
+                    password,
+                    options: { captchaToken: window.mypnlCaptchaToken }
                 });
             } else {
                 result = await supabaseClient.auth.signUp({
@@ -3456,7 +3500,8 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
                     password,
                     options: {
                         data: { full_name: displayName },
-                        emailRedirectTo: 'https://giupe-lab.github.io/indexhtml/'
+                        emailRedirectTo: 'https://giupe-lab.github.io/indexhtml/',
+                        captchaToken: window.mypnlCaptchaToken
                     }
                 });
             }
@@ -3476,6 +3521,7 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
         } catch (error) {
             showAuthError(error.message || 'Si è verificato un errore.');
         } finally {
+            window.resetMyPnlTurnstile();
             authSubmit.disabled = false;
             authSubmit.textContent = authMode === 'login' ? 'Accedi' : 'Registrati';
         }
@@ -3491,10 +3537,16 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
             return;
         }
 
+        if (!window.mypnlCaptchaToken) {
+            showAuthError('Completa prima la verifica di sicurezza.');
+            return;
+        }
+
         const { error } = await supabaseClient.auth.resetPasswordForEmail(
             email,
-            { redirectTo: window.location.href }
+            { redirectTo: window.location.href, captchaToken: window.mypnlCaptchaToken }
         );
+        window.resetMyPnlTurnstile();
 
         if (error) {
             showAuthError(error.message);
