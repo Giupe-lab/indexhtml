@@ -220,6 +220,30 @@
                </button>
 </form>
 
+<form id="signup-otp-form" class="hidden space-y-4">
+    <p class="text-sm text-slate-300">
+        Abbiamo inviato un codice di conferma a <strong id="signup-otp-email" class="text-white"></strong>.
+        Inserisci qui il codice di 6 cifre ricevuto via email.
+    </p>
+    <div>
+        <label for="signup-otp-token" class="mb-2 block text-sm text-slate-300">Codice di conferma</label>
+        <input id="signup-otp-token" type="text" inputmode="numeric" autocomplete="one-time-code"
+            pattern="[0-9]{6}" maxlength="6" required
+            class="w-full rounded-lg border border-white/10 bg-[#05070F] px-4 py-3 text-center text-2xl tracking-[0.4em] text-white outline-none focus:border-blue-500"
+            placeholder="000000">
+    </div>
+    <p id="signup-otp-error" class="hidden text-sm text-red-400"></p>
+    <button type="submit" class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500">
+        Conferma email
+    </button>
+    <button id="signup-otp-resend" type="button" class="w-full text-sm text-blue-400 hover:text-blue-300">
+        Invia un nuovo codice
+    </button>
+    <button id="signup-otp-back" type="button" class="w-full text-sm text-slate-400 hover:text-white">
+        Torna all'accesso
+    </button>
+</form>
+
 <!-- INCOLLA QUI IL MODULO password-update-form -->
 
 <form id="password-update-form" class="hidden space-y-4">
@@ -3275,6 +3299,13 @@ function closeSettingsModal() {
     const authRecovery = document.getElementById('auth-recovery');
     const authError = document.getElementById('auth-error');
 const passwordUpdateForm = document.getElementById('password-update-form');
+const signupOtpForm = document.getElementById('signup-otp-form');
+const signupOtpEmail = document.getElementById('signup-otp-email');
+const signupOtpToken = document.getElementById('signup-otp-token');
+const signupOtpError = document.getElementById('signup-otp-error');
+const signupOtpResend = document.getElementById('signup-otp-resend');
+const signupOtpBack = document.getElementById('signup-otp-back');
+let pendingSignupEmail = '';
 const newPasswordInput = document.getElementById('new-password');
 const confirmNewPasswordInput = document.getElementById('confirm-new-password');
 const passwordUpdateError = document.getElementById('password-update-error');
@@ -3283,14 +3314,89 @@ const authActions = document.getElementById('auth-actions');
 function showPasswordRecovery() {
     authScreen.classList.remove('hidden');
     authForm.classList.add('hidden');
+    signupOtpForm.classList.add('hidden');
     authActions.classList.add('hidden');
     passwordUpdateForm.classList.remove('hidden');
+}
+
+function showSignupOtp(email) {
+    pendingSignupEmail = email;
+    signupOtpEmail.textContent = email;
+    signupOtpToken.value = '';
+    signupOtpError.classList.add('hidden');
+    authForm.classList.add('hidden');
+    passwordUpdateForm.classList.add('hidden');
+    authActions.classList.add('hidden');
+    signupOtpForm.classList.remove('hidden');
+    signupOtpToken.focus();
+}
+
+function showSignupOtpError(message) {
+    signupOtpError.textContent = message;
+    signupOtpError.classList.remove('hidden');
 }
 
 supabaseClient.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') {
         showPasswordRecovery();
     }
+});
+
+signupOtpForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    signupOtpError.classList.add('hidden');
+    const token = signupOtpToken.value.trim();
+
+    if (!/^[0-9]{6}$/.test(token)) {
+        showSignupOtpError('Inserisci il codice numerico di 6 cifre.');
+        signupOtpToken.focus();
+        return;
+    }
+
+    const button = signupOtpForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Verifica in corso...';
+
+    try {
+        const { error } = await supabaseClient.auth.verifyOtp({
+            email: pendingSignupEmail,
+            token,
+            type: 'email'
+        });
+        if (error) throw error;
+        await enterApp();
+    } catch (error) {
+        showSignupOtpError(error.message || 'Codice non valido o scaduto. Richiedi un nuovo codice.');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Conferma email';
+    }
+});
+
+signupOtpResend.addEventListener('click', async () => {
+    signupOtpError.classList.add('hidden');
+    signupOtpResend.disabled = true;
+    signupOtpResend.textContent = 'Invio in corso...';
+    try {
+        const { error } = await supabaseClient.auth.resend({
+            type: 'signup',
+            email: pendingSignupEmail
+        });
+        if (error) throw error;
+        showSignupOtpError('Nuovo codice inviato. Controlla anche la cartella Spam.');
+    } catch (error) {
+        showSignupOtpError(error.message || 'Non è stato possibile inviare un nuovo codice. Riprova tra poco.');
+    } finally {
+        signupOtpResend.disabled = false;
+        signupOtpResend.textContent = 'Invia un nuovo codice';
+    }
+});
+
+signupOtpBack.addEventListener('click', () => {
+    signupOtpForm.classList.add('hidden');
+    authForm.classList.remove('hidden');
+    authActions.classList.remove('hidden');
+    setAuthMode('login');
 });
 
 passwordUpdateForm.addEventListener('submit', async (event) => {
@@ -3466,9 +3572,7 @@ passwordUpdateForm.addEventListener('submit', async (event) => {
             }
 
             if (authMode === 'signup' && !result.data.session) {
-                showAuthError(
-                    'Registrazione completata! Controlla la tua email per confermare l’account.'
-                );
+                showSignupOtp(email);
                 return;
             }
 
