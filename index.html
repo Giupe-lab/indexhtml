@@ -1491,11 +1491,13 @@ async function encryptMyPnLArchive(encryptionKey, recoveryCode) {
 
 
 
-async function saveEncryptedArchive() {
+async function saveEncryptedArchiveNow() {
     if (!currentUserId || !currentEncryptionKey) {
         throw new Error('Chiave di cifratura non disponibile.');
     }
 
+    // Lo snapshot viene creato quando il salvataggio entra in esecuzione,
+    // non quando viene accodato: così viene sempre scritto lo stato più recente.
     const archive = collectMyPnLData();
 
     const encryptedArchive = await MYPNL_CRYPTO.encrypt(
@@ -1519,6 +1521,19 @@ async function saveEncryptedArchive() {
     if (error) throw error;
 
     console.log('Archivio cifrato sincronizzato.');
+}
+
+// Un solo salvataggio cloud alla volta: evita che richieste concorrenti
+// completate in ordine diverso sovrascrivano l'ultima versione dei dati.
+let cloudSaveQueue = Promise.resolve();
+
+function saveEncryptedArchive() {
+    const operation = cloudSaveQueue
+        .catch(() => {})
+        .then(() => saveEncryptedArchiveNow());
+
+    cloudSaveQueue = operation;
+    return operation;
 }
 
        
@@ -1580,18 +1595,51 @@ async function initializeEncryptedCloud() {
         ['encrypt', 'decrypt']
     );
 
-    const storedArchive = JSON.parse(data.encrypted_data);
+    let storedArchive;
 
-    if (!storedArchive.encryptedArchive) {
-        throw new Error('Formato archivio non riconosciuto.');
+    try {
+        storedArchive = typeof data.encrypted_data === 'string'
+            ? JSON.parse(data.encrypted_data)
+            : data.encrypted_data;
+    } catch (error) {
+        throw new Error('L’archivio cloud non contiene JSON valido. I dati remoti sono stati lasciati intatti.');
     }
 
-    const archive = await MYPNL_CRYPTO.decrypt(
-        storedArchive.encryptedArchive,
-        currentEncryptionKey
-    );
+    if (!storedArchive || !storedArchive.encryptedArchive) {
+        throw new Error('Formato archivio non riconosciuto. I dati remoti sono stati lasciati intatti.');
+    }
 
-    trades = Array.isArray(archive.trades) ? archive.trades : [];
+    let archive;
+    try {
+        archive = await MYPNL_CRYPTO.decrypt(
+            storedArchive.encryptedArchive,
+            currentEncryptionKey
+        );
+    } catch (error) {
+        console.error('Errore decifratura archivio My PnL:', error);
+        throw new Error('La chiave è stata recuperata, ma non riesco a decifrare l’archivio. Nessun dato è stato sovrascritto.');
+    }
+
+    if (!archive || typeof archive !== 'object' || !Array.isArray(archive.trades)) {
+        throw new Error('Archivio decifrato ma struttura dei trade non valida. Nessun dato è stato sovrascritto.');
+    }
+
+    // Non sostituire mai uno storico locale presente con un archivio cloud
+    // vuoto inatteso: prima va verificata la compatibilità del formato.
+    const localTrades = (() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            return Array.isArray(saved) ? saved : [];
+        } catch {
+            return [];
+        }
+    })();
+
+    if (archive.trades.length === 0 && localTrades.length > 0) {
+        throw new Error('L’archivio cloud risulta vuoto ma questo dispositivo contiene trade. Recupero bloccato per proteggere lo storico.');
+    }
+
+    trades = archive.trades;
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
 
