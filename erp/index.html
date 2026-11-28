@@ -65,10 +65,5 @@ main{padding:28px 32px 48px;max-width:1600px;margin:auto}.welcome{display:flex;j
 <section id="help" class="modulepage"><div class="welcome"><div><div class="eyebrow">SUPPORT</div><h1 class="h1">Help center</h1><div class="sub">Guidance and support for your workspace.</div></div></div><div class="emptyhint">Help center content will be added as product modules are implemented.</div></section>
 </main></div>
 <div class="toast" id="toast"></div>
-<script>
-const pageNames={overview:'Overview',sales:'Sales & CRM',finance:'Finance',inventory:'Inventory',projects:'Projects',hr:'Human Resources',analytics:'Analytics',settings:'Settings',help:'Help center'};
-document.querySelectorAll('.navitem[data-page]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.page;document.querySelectorAll('.navitem').forEach(x=>x.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.modulepage').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.getElementById('crumb').textContent=pageNames[id]||id;window.scrollTo({top:0,behavior:'smooth'});}));
-let toastTimer;function toast(message){const el=document.getElementById('toast');el.textContent=message;el.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',2600)}
-document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter'){toast('Workspace search preview: '+(e.target.value||'type a query'));}});
-</script>
+<script type="module" src="./app.js"></script>
 </body></html>
