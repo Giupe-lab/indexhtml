@@ -34,7 +34,7 @@
 <div class="workspace">
 <header class="topbar"><div class="crumb">Workspace <span style="color:#44536b">/</span> <b id="crumb">Overview</b></div><div class="topright"><input class="search" placeholder="Search anything…" id="search"><div class="user"><div class="avatar">O</div><span>Workspace admin</span></div></div></header>
 <main class="main">
-<div class="welcome"><div><div class="eyebrow">MONDAY, 28 NOVEMBER 2026</div><h1 class="h1" id="heading">Good morning, welcome back.</h1><div class="sub">Here's what's happening across your business today.</div></div><button class="btn primary" onclick="notify('Create action is available in the connected product version.')">＋ &nbsp; New action</button></div>
+<div class="welcome"><div><div class="eyebrow">SATURDAY, 28 NOVEMBER 2026</div><h1 class="h1" id="heading">Good morning, welcome back.</h1><div class="sub">Here's what's happening across your business today.</div></div><button class="btn primary" onclick="notify('Create action is available in the connected product version.')">＋ &nbsp; New action</button></div>
 <section class="grid4">
 <div class="card"><div class="kpihead">Total revenue <div class="kpiicon">↗</div></div><div class="kpi">€248,560</div><div class="trend">↗ 12.8% <span>vs. last month</span></div></div>
 <div class="card"><div class="kpihead">Net profit <div class="kpiicon">◈</div></div><div class="kpi">€68,420</div><div class="trend">↗ 8.4% <span>vs. last month</span></div></div>
@@ -70,7 +70,7 @@
 <div class="toast" id="toast"></div>
 <script>
 function notify(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
-document.querySelectorAll('.nav button[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const p=btn.dataset.page;document.getElementById('crumb').textContent=p;if(p==='Overview'){document.getElementById('heading').textContent='Good morning, welcome back.'}else{document.getElementById('heading').textContent=p;notify(p+' module preview — demo environment')}})
+document.querySelectorAll('.nav button[data-page]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const p=btn.dataset.page;document.getElementById('crumb').textContent=p;if(p==='Overview'){document.getElementById('heading').textContent='Good morning, welcome back.'}else{document.getElementById('heading').textContent=p;notify(p+' module preview — demo environment')}}))
 document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value.trim())notify('Search preview: '+e.target.value)})
 </script>
 </body></html>
