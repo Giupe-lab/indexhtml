@@ -112,12 +112,8 @@ for select to authenticated using (
   exists (select 1 from public.organization_members m where m.organization_id = id and m.user_id = (select auth.uid()))
 );
 
-create policy "members can view memberships in their org" on public.organization_members
-for select to authenticated using (
-  user_id = (select auth.uid()) or exists (
-    select 1 from public.organization_members m where m.organization_id = organization_id and m.user_id = (select auth.uid())
-  )
-);
+create policy "users can view their own memberships" on public.organization_members
+for select to authenticated using (user_id = (select auth.uid()));
 
 create policy "members manage customers in org" on public.customers
 for all to authenticated using (
