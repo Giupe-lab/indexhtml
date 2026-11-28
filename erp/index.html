@@ -65,5 +65,14 @@ main{padding:28px 32px 48px;max-width:1600px;margin:auto}.welcome{display:flex;j
 <section id="help" class="modulepage"><div class="welcome"><div><div class="eyebrow">SUPPORT</div><h1 class="h1">Help center</h1><div class="sub">Guidance and support for your workspace.</div></div></div><div class="emptyhint">Help center content will be added as product modules are implemented.</div></section>
 </main></div>
 <div class="toast" id="toast"></div>
-<script type="module" src="./app.js"></script>
+<script>
+function orvexBootError(message){
+  let box=document.getElementById('orvex-boot-error');
+  if(!box){box=document.createElement('div');box.id='orvex-boot-error';box.style.cssText='position:fixed;z-index:9999;inset:auto 16px 16px 16px;background:#351d28;border:1px solid #8e4056;color:#ffe7ed;padding:16px 18px;border-radius:12px;font:13px/1.5 Arial;box-shadow:0 10px 30px #0008';document.body.appendChild(box);}
+  box.textContent='ORVEX non è riuscito ad avviare il modulo applicativo. '+message+' Ricarica la pagina; se il problema continua, contatta il supporto.';
+}
+window.addEventListener('error',e=>{if(e.filename&&(/app\\.js|esm\\.sh/).test(e.filename))orvexBootError(e.message||'Errore JavaScript.');});
+window.addEventListener('unhandledrejection',e=>orvexBootError(e.reason?.message||'Errore di caricamento o connessione.'));
+</script>
+<script type="module" src="./app.js?v=20261128-2" onerror="orvexBootError('Impossibile caricare app.js o la libreria Supabase.');"></script>
 </body></html>
